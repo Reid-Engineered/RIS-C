@@ -1,12 +1,12 @@
 # Local validation
 
-Local environment: Linux x86_64, Rust 1.100.0, release profile for the benchmark. Native CI has additionally executed and passed all 37 local tests on Linux x86-64, macOS ARM64, and Windows AMD64 for the numerical source recorded in [platform-evidence.json](../reports/platform-evidence.json). The record includes job URLs, runtime platform/architecture, commit/run IDs, source fingerprints, test counts, and log digests; it is validated against the current numerical source before the platform criterion receives credit.
+Local environment: Linux x86_64, Rust 1.100.0, release profile for the benchmark. Native CI has additionally executed and passed all 38 local tests on Linux x86-64, macOS ARM64, and Windows AMD64 for the numerical source recorded in [platform-evidence.json](../reports/platform-evidence.json). The record includes job URLs, runtime platform/architecture, commit/run IDs, source fingerprints, test counts, and log digests; it is validated against the current numerical source before the platform criterion receives credit.
 
 ## Checks
 
 - `cargo fmt --all -- --check`
 - `cargo clippy --workspace --all-targets --locked -- -D warnings`
-- `cargo test --workspace --locked`: 37 tests passed; thirteen external-oracle tests intentionally ignored in the ordinary suite.
+- `cargo test --workspace --locked`: 38 tests passed; thirteen external-oracle tests intentionally ignored in the ordinary suite.
 - `NGSPICE_BIN=... cargo test -p spice-netlist --test ngspice --locked -- --ignored`: thirteen oracle tests passed against locally built, unmodified ngspice 47.
 
 The test suites include independent Peroxide dense solves, finite-difference checks of Peroxide-generated device derivatives, terminal charge/current conservation, RLC analytical responses, all controlled-source types, parameter scoping/cycles/includes, 2,000 deterministic malformed netlists, initial conditions, limits, singular circuits, callback cancellation, concurrent simulators, and CLI exit/output behavior.

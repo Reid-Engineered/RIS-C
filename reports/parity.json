@@ -2,7 +2,7 @@
   "schema_version": 1,
   "scope_version": "core-v1.0",
   "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
-  "generated_at": "2026-11-13T22:17:18+00:00",
+  "generated_at": "2026-11-13T22:24:49+00:00",
   "source_sha256": "cac3e4eeb0f5fba4108b4142d3efcbc0bc4f06e8bb25fdfe3bd89c6a3f4148ad",
   "platform": "linux",
   "suites": {
@@ -19,7 +19,7 @@
         "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed"
       },
       "log": "reports/logs/core.log",
-      "log_sha256": "cd10fb7e543578831ae315e089996253a89b6123e583ad61cd8ddc447a265ca4"
+      "log_sha256": "45c0fb1b246dc421164b3041a286e285928f2c028173aa7a0578d94a7f3fd85f"
     },
     "analytical": {
       "status": "passed",
@@ -41,7 +41,7 @@
         "tolerances_and_limits_are_checked": "passed"
       },
       "log": "reports/logs/analytical.log",
-      "log_sha256": "8535a3ea5af2d2a21bacba37b451d611cc559d3e402a0b297786a72dc017bee2"
+      "log_sha256": "fd9852a81dc141651ce3d118b7e45de9b9fa03278f2bef5f0471d9788e3d68b5"
     },
     "expressions": {
       "status": "passed",
@@ -51,7 +51,7 @@
         "expression::tests::expressions": "passed"
       },
       "log": "reports/logs/expressions.log",
-      "log_sha256": "56f9576595105d33fa11c41d3d43da73e08ef8f12fc65cc5a88dbefaefd34ff2"
+      "log_sha256": "867a88d415d63ba2719c405eda065c0df1e6256b2e625b827c96fd7b0f8e911f"
     },
     "parser": {
       "status": "passed",
@@ -72,7 +72,7 @@
         "stiff_diode_transient_converges_under_refinement": "passed"
       },
       "log": "reports/logs/parser.log",
-      "log_sha256": "f62152401fe875534ea861c3a39e2b0c2e24cb44f77d153cc9ac02593b442945"
+      "log_sha256": "6787e4552f6b92196768b4e8d7227c68efea7332577d645a4d5ca367f02e14dc"
     },
     "cli": {
       "status": "passed",
@@ -82,7 +82,7 @@
         "stdout_csv_and_failure_exit": "passed"
       },
       "log": "reports/logs/cli.log",
-      "log_sha256": "49333960a2dac2170a3053ca81c34627ee08542d2d6a929ca5d5c2a893b50c98"
+      "log_sha256": "14ab409f04eeafb889a52f410ae7da87c36fdeea48997c293243cffc6f5c3e96"
     },
     "oracle": {
       "status": "passed",
@@ -103,7 +103,7 @@
         "temperature_breakdown_and_base_resistance": "passed"
       },
       "log": "reports/logs/oracle.log",
-      "log_sha256": "410ed686e29eff87eb3a014236809c7f88341e4648d76c36bbb508e128e391d5",
+      "log_sha256": "6106a077d1141a8f24713626223bf8c99603f2b85e7a13bd49bf56b219353206",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -114,21 +114,25 @@
         "ladder_10000": "passed"
       },
       "log": "reports/logs/scale.log",
-      "log_sha256": "56a13391897c120e3585ef079cb5bb73d53f7430d496b264a00bd134548f6f76"
+      "log_sha256": "4248aa2421c03a347341f48eed60ba6224150ebb5c6fb22cd3e4ddcd4d8e5815"
     },
     "platform": {
-      "status": "not_run",
-      "tests": {},
-      "reason": "native evidence is stale for this numerical source"
+      "status": "passed",
+      "tests": {
+        "Linux": "passed",
+        "Darwin": "passed",
+        "Windows": "passed"
+      },
+      "evidence": "reports/platform-evidence.json"
     }
   },
   "metrics": {
     "total": {
       "total": 48,
       "implemented": 48,
-      "evidenced": 47,
+      "evidenced": 48,
       "implementation_percent": 100.0,
-      "evidenced_percent": 97.92
+      "evidenced_percent": 100.0
     },
     "categories": {
       "Analyses": {
@@ -169,9 +173,9 @@
       "Library and acceptance": {
         "total": 8,
         "implemented": 8,
-        "evidenced": 7,
+        "evidenced": 8,
         "implementation_percent": 100.0,
-        "evidenced_percent": 87.5
+        "evidenced_percent": 100.0
       }
     },
     "criteria": [
@@ -703,7 +707,7 @@
           "platform/Darwin",
           "platform/Windows"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "L07",

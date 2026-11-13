@@ -28,7 +28,7 @@ The [small implementation plan](RELIABILITY_PLAN.md) adds direct witnesses for o
 
 ## Native acceptance
 
-[GitHub Actions run 43515975280](https://github.com/Reid-Engineered/RIS-C/actions/runs/43515975280) passed 37 tests on each of Linux x86-64, macOS ARM64, and Windows AMD64. Results were extracted from successful job logs, checked against GitHub job conclusions, and matched to the numerical source SHA-256. The parity runner refuses credit from stale or incomplete platform records. The runtime commit SHA in a PR job can be its synthetic merge commit; the workflow head and numerical fingerprint are retained separately.
+[GitHub Actions run 43518126295](https://github.com/Reid-Engineered/RIS-C/actions/runs/43518126295) passed 38 tests on each of Linux x86-64, macOS ARM64, and Windows AMD64. Results were extracted from successful job logs, checked against GitHub job conclusions, and matched to the numerical source SHA-256. The parity runner refuses credit from stale or incomplete platform records. The runtime commit SHA in a PR job can be its synthetic merge commit; the workflow head and numerical fingerprint are retained separately.
 
 ## Completion boundary and follow-up work
 
