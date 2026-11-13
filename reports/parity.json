@@ -2,8 +2,8 @@
   "schema_version": 1,
   "scope_version": "core-v1.0",
   "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
-  "generated_at": "2026-11-13T21:58:50+00:00",
-  "source_sha256": "a7395e244c9e51133fa6e61fe1e89e085326865cdb5f0ce8c8393b8112b27b07",
+  "generated_at": "2026-11-13T22:13:14+00:00",
+  "source_sha256": "538268ee72550b5441f4162cbbf4a6fa8d3653f82235b90be5729d5b31e55673",
   "platform": "linux",
   "suites": {
     "core": {
@@ -19,7 +19,7 @@
         "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed"
       },
       "log": "reports/logs/core.log",
-      "log_sha256": "cd10fb7e543578831ae315e089996253a89b6123e583ad61cd8ddc447a265ca4"
+      "log_sha256": "649e46907e4e7b9e7287cb1b3dd22176cc5fbb8cb0b9d325fe283e0a0bbb6d3d"
     },
     "analytical": {
       "status": "passed",
@@ -41,7 +41,7 @@
         "tolerances_and_limits_are_checked": "passed"
       },
       "log": "reports/logs/analytical.log",
-      "log_sha256": "809f95e29d581cecce141a680c1d9e483929122686f3a81a5ba3a8ed65fd2f5c"
+      "log_sha256": "713fe3267db6094de9a49858d9dd4bcd4710d0e08f3d3ef53e98cacb54e5c588"
     },
     "expressions": {
       "status": "passed",
@@ -51,12 +51,13 @@
         "expression::tests::expressions": "passed"
       },
       "log": "reports/logs/expressions.log",
-      "log_sha256": "cfdacacac703e3209a574c4ea1c160dbc5c1bea4a34635e253267993b39beddd"
+      "log_sha256": "7b32d2dfa89f89a234a629e285bafca1d5b48f943187c1943ff89bf76f1ecbe3"
     },
     "parser": {
       "status": "passed",
       "returncode": 0,
       "tests": {
+        "bare_off_and_braced_device_initial_conditions": "passed",
         "bistable_latch_and_scaled_pivots": "passed",
         "deep_expressions_are_bounded": "passed",
         "every_classic_electrical_parameter_is_accepted": "passed",
@@ -71,7 +72,7 @@
         "stiff_diode_transient_converges_under_refinement": "passed"
       },
       "log": "reports/logs/parser.log",
-      "log_sha256": "ca51608e53522b3b881fb213aa44c5bde354c6b0adbb94f402082c92ab109688"
+      "log_sha256": "2cf92fb2cb94dd50cf7b2c014096a4134782ea3ddc579d8d96ed16da061b8e49"
     },
     "cli": {
       "status": "passed",
@@ -81,7 +82,7 @@
         "stdout_csv_and_failure_exit": "passed"
       },
       "log": "reports/logs/cli.log",
-      "log_sha256": "91fdf6b8d6087a8fd4524b29b8239fe1eb959da0923938dec0c58b8fadfc4175"
+      "log_sha256": "c3678929fdc3a74a25f3562b0978afd307dff401e5dcbd4064d54d1632f4326d"
     },
     "oracle": {
       "status": "passed",
@@ -102,7 +103,7 @@
         "temperature_breakdown_and_base_resistance": "passed"
       },
       "log": "reports/logs/oracle.log",
-      "log_sha256": "d93861229b9d5d614c19a30848ad64f10e64f5440b0ef457bfbf38898e0fea28",
+      "log_sha256": "f247c09b66992bfe4dabb9f6272de914855cebb362b96ed091eae47e8803e3f3",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -113,20 +114,20 @@
         "ladder_10000": "passed"
       },
       "log": "reports/logs/scale.log",
-      "log_sha256": "2e2330da50223b8ee025f5d5edd9de5820377dbaacee9124a04c271590b4e336"
+      "log_sha256": "5e6ba66a64d4fbb1ba10180620d69b75f5caad71da3729abdbab5038dbd304e3"
     },
     "platform": {
       "status": "not_run",
       "tests": {},
-      "reason": "native CI evidence not imported"
+      "reason": "native evidence is stale for this numerical source"
     }
   },
   "metrics": {
     "total": {
       "total": 48,
-      "implemented": 47,
+      "implemented": 48,
       "evidenced": 47,
-      "implementation_percent": 97.92,
+      "implementation_percent": 100.0,
       "evidenced_percent": 97.92
     },
     "categories": {
@@ -167,9 +168,9 @@
       },
       "Library and acceptance": {
         "total": 8,
-        "implemented": 7,
+        "implemented": 8,
         "evidenced": 7,
-        "implementation_percent": 87.5,
+        "implementation_percent": 100.0,
         "evidenced_percent": 87.5
       }
     },
@@ -695,14 +696,14 @@
         "id": "L06",
         "category": "Library and acceptance",
         "title": "Observed Linux/macOS/Windows numerical acceptance",
-        "implemented": false,
+        "implemented": true,
         "evidence": "docs/STATUS.md",
         "checks": [
           "platform/Linux",
           "platform/Darwin",
           "platform/Windows"
         ],
-        "state": "missing"
+        "state": "implemented, evidence incomplete"
       },
       {
         "id": "L07",

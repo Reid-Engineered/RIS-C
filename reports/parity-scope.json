@@ -491,7 +491,7 @@
       "id": "L06",
       "category": "Library and acceptance",
       "title": "Observed Linux/macOS/Windows numerical acceptance",
-      "implemented": false,
+      "implemented": true,
       "evidence": "docs/STATUS.md",
       "checks": [
         "platform/Linux",

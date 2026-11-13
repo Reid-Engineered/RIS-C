@@ -143,6 +143,29 @@ fn instance_temperature_and_initial_voltage_networks() {
 }
 
 #[test]
+fn bare_off_and_braced_device_initial_conditions() {
+    let p = parse_str("Device hints\n.param gain=0.05\nD1 a 0 diode OFF\nQ1 c b 0 transistor OFF 2 IC={gain * 4},{gain * 2}\nM1 d g 0 body mos OFF IC=0.2,{gain * 2},-0.1\nRa a 0 1k\nRc c 0 1k\nRb b 0 1k\nRd d 0 1k\nRg g 0 1k\nRbody body 0 1k\n.model diode D\n.model transistor NPN\n.model mos NMOS\n.tran 1n 2n uic\n.end").unwrap();
+    let c = p.circuit.compile().unwrap();
+    let options = match &p.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let samples = c.simulator().transient(options).unwrap();
+    for (name, expected) in [
+        ("v(c)", 0.1),
+        ("v(b)", 0.2),
+        ("v(d)", 0.2),
+        ("v(g)", 0.1),
+        ("v(body)", -0.1),
+    ] {
+        assert!(
+            (samples[0].get(&c, name).unwrap() - expected).abs() < 1e-12,
+            "{name}"
+        );
+    }
+}
+
+#[test]
 fn every_classic_electrical_parameter_is_accepted() {
     let cases = common::legacy::variants();
     assert_eq!(cases.len(), 152);

@@ -83,4 +83,4 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run -p spice-core --example ladder --release -- 10000
 ```
 
-CI defines native Rust checks for Linux/macOS/Windows and a separate Linux ngspice oracle job. Only Linux has been exercised in this workspace.
+Native numerical acceptance has been observed on Linux x86-64, macOS ARM64, and Windows AMD64 for the recorded numerical fingerprint; see [platform evidence](reports/platform-evidence.json). A separate Linux job runs the pinned ngspice oracle suite. New source changes invalidate stale platform evidence.

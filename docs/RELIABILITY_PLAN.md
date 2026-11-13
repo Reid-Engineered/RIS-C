@@ -7,3 +7,7 @@
 5. Register the five new witnesses against the existing 48-item parity denominator, run the full validation suite, and refresh the report/history.
 
 Acceptance: targeted tests pass without masking solver failures; formatting, Clippy, Rust tests, parity-accounting tests, and ngspice comparisons pass. Keep the broader bistability/difficult-pivot/stiff-corpus criterion open: one stiff fixture does not complete that corpus.
+
+## Follow-through
+
+The subsequent core-completion increment implements and audits the classic electrical sets, adds process/phase/substrate corrections and consistent IC networks, expands the numerical stress/parameter matrices, and records native acceptance on all three platforms. See [the audit](LEGACY_PARAMETER_AUDIT.md) and [current parity report](PARITY.md).

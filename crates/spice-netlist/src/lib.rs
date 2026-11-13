@@ -747,7 +747,14 @@ impl Context<'_> {
                         return Err(line.error("device/model type mismatch"));
                     }
                     let mut g = Geometry::default();
-                    let mut rest = &t[node_count + 2..];
+                    let rest = &t[node_count + 2..];
+                    g.off = rest.iter().any(|s| s == "off");
+                    let filtered: Vec<_> = rest
+                        .iter()
+                        .filter(|s| s.as_str() != "off")
+                        .cloned()
+                        .collect();
+                    let mut rest = filtered.as_slice();
                     if !name.starts_with('m')
                         && rest
                             .first()
@@ -756,16 +763,11 @@ impl Context<'_> {
                         g.area = value(line, &rest[0], env)?;
                         rest = &rest[1..];
                     }
-                    g.off = rest.iter().any(|s| s == "off");
-                    let filtered: Vec<_> = rest
-                        .iter()
-                        .filter(|s| s.as_str() != "off")
-                        .cloned()
-                        .collect();
-                    for (key, expr) in assignments(line, &filtered)? {
+                    for (key, expr) in assignments(line, rest)? {
                         if key == "ic" {
-                            let values = expr
-                                .split_whitespace()
+                            let tokens = tokenize(&expr).map_err(|e| line.error(e))?;
+                            let values = tokens
+                                .iter()
                                 .map(|s| value(line, s, env))
                                 .collect::<PResult<Vec<_>>>()?;
                             let limit = if name.starts_with('d') {

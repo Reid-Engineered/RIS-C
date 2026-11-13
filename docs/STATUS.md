@@ -1,6 +1,6 @@
 # Implementation status
 
-This workspace implements the planned classic analog core and its explicit electrical-parameter inventory. Native platform acceptance remains tied to recorded CI results for the current numerical source, not to cross-compilation or a configured workflow alone. The [maintained percentage report](PARITY.md) quantifies the versioned core checklist and identifies criteria without executable evidence.
+This workspace implements the planned classic analog core and its explicit electrical-parameter inventory. Native Linux/macOS/Windows acceptance is recorded for the validated numerical source in [platform evidence](../reports/platform-evidence.json); it is based on actual execution, not cross-compilation or a configured workflow alone. The [maintained percentage report](PARITY.md) quantifies the versioned core checklist and identifies criteria without executable evidence.
 
 | Planned stage | Current status |
 | --- | --- |
@@ -22,9 +22,13 @@ This workspace implements the planned classic analog core and its explicit elect
 
 ## Reliability increment
 
-The [small implementation plan](RELIABILITY_PLAN.md) adds direct witnesses for octave sweeps, restoring nominal nonlinear bias after a DC sweep, successful gmin/source continuation after direct-solve failure, and isolation of accepted histories after rejected/failed trials. Recovery results are checked against the unmodified circuit and ngspice 47. A coupled nanosecond/millisecond diode/RC fixture adds timestep-refinement and oracle waveform checks. The broader stress-corpus criterion remains open.
+The [small implementation plan](RELIABILITY_PLAN.md) adds direct witnesses for octave sweeps, restoring nominal nonlinear bias after a DC sweep, successful gmin/source continuation after direct-solve failure, and isolation of accepted histories after rejected/failed trials. Recovery results are checked against the unmodified circuit and ngspice 47. A coupled nanosecond/millisecond diode/RC fixture adds timestep-refinement and oracle waveform checks. The subsequent core increment completes the declared stress corpus with bistability, difficult pivots, and a second stiff topology.
 
 `RunStats` now exposes `direct_failures`, `gmin_attempts`, `source_attempts`, and the last successful `dc_method`. `continuation_attempts` includes initial gmin/source solves and equals the sum of both strategy counters; final rechecks of the original equations are excluded. No test-only convergence forcing or alternative circuit equations are introduced.
+
+## Native acceptance
+
+[GitHub Actions run 43515975280](https://github.com/Reid-Engineered/RIS-C/actions/runs/43515975280) passed 37 tests on each of Linux x86-64, macOS ARM64, and Windows AMD64. Results were extracted from successful job logs, checked against GitHub job conclusions, and matched to the numerical source SHA-256. The parity runner refuses credit from stale or incomplete platform records. The runtime commit SHA in a PR job can be its synthetic merge commit; the workflow head and numerical fingerprint are retained separately.
 
 ## Completion boundary and follow-up work
 
