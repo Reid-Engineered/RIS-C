@@ -2,8 +2,8 @@
   "schema_version": 1,
   "scope_version": "core-v1.0",
   "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
-  "generated_at": "2026-11-13T21:43:10+00:00",
-  "source_sha256": "33067f02352a5e9314214f36debe48c6c08d29cd97d68c162fb03fc85ad72c6a",
+  "generated_at": "2026-11-13T21:58:50+00:00",
+  "source_sha256": "a7395e244c9e51133fa6e61fe1e89e085326865cdb5f0ce8c8393b8112b27b07",
   "platform": "linux",
   "suites": {
     "core": {
@@ -13,12 +13,13 @@
         "device::tests::peroxide_jacobians_and_charge_conservation": "passed",
         "linear::tests::peroxide_dense_oracle_and_complex": "passed",
         "simulator::excess_phase_history_tests::excess_phase_history_survives_discarded_and_failed_trials": "passed",
+        "simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors": "passed",
         "simulator::reliability_tests::gmin_recovers_after_direct_newton_failure": "passed",
         "simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories": "passed",
         "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed"
       },
       "log": "reports/logs/core.log",
-      "log_sha256": "867b024372344fa7fd081b09759108f9bf59124ffd2c1d8dd2e3a89b25f0a0da"
+      "log_sha256": "cd10fb7e543578831ae315e089996253a89b6123e583ad61cd8ddc447a265ca4"
     },
     "analytical": {
       "status": "passed",
@@ -40,7 +41,7 @@
         "tolerances_and_limits_are_checked": "passed"
       },
       "log": "reports/logs/analytical.log",
-      "log_sha256": "8c03902d6f88799621318a33000759f1e9169d05f85eeebde926338712208502"
+      "log_sha256": "809f95e29d581cecce141a680c1d9e483929122686f3a81a5ba3a8ed65fd2f5c"
     },
     "expressions": {
       "status": "passed",
@@ -50,7 +51,7 @@
         "expression::tests::expressions": "passed"
       },
       "log": "reports/logs/expressions.log",
-      "log_sha256": "671ee0212c3f42627bd0a3c2a64ead4d537de86618323ff2813fd34f45290933"
+      "log_sha256": "cfdacacac703e3209a574c4ea1c160dbc5c1bea4a34635e253267993b39beddd"
     },
     "parser": {
       "status": "passed",
@@ -70,7 +71,7 @@
         "stiff_diode_transient_converges_under_refinement": "passed"
       },
       "log": "reports/logs/parser.log",
-      "log_sha256": "2570b47729cb631d95cf7ca7860e0f5d0cf626be61e439ab0590e9931fc515e8"
+      "log_sha256": "ca51608e53522b3b881fb213aa44c5bde354c6b0adbb94f402082c92ab109688"
     },
     "cli": {
       "status": "passed",
@@ -80,15 +81,15 @@
         "stdout_csv_and_failure_exit": "passed"
       },
       "log": "reports/logs/cli.log",
-      "log_sha256": "01ead400a4cdda42eb4e8b96ff3ee22e27c1f9027253bbf29da4651b379a06af"
+      "log_sha256": "91fdf6b8d6087a8fd4524b29b8239fe1eb959da0923938dec0c58b8fadfc4175"
     },
     "oracle": {
-      "status": "failed",
-      "returncode": 101,
+      "status": "passed",
+      "returncode": 0,
       "tests": {
         "bjt_excess_phase_matches_reference": "passed",
         "classic_parameter_matrix_matches_ngspice": "passed",
-        "classic_transient_temperature_matrix_matches_ngspice": "failed",
+        "classic_transient_temperature_matrix_matches_ngspice": "passed",
         "continuation_recovery_matches_original_ngspice_bias": "passed",
         "instance_temperature_overrides_match_ngspice": "passed",
         "mos1_process_and_sheet_resistance_match_reference": "passed",
@@ -101,7 +102,7 @@
         "temperature_breakdown_and_base_resistance": "passed"
       },
       "log": "reports/logs/oracle.log",
-      "log_sha256": "988726f1d6107883e247b74d48a20326eaa5ef9ba22c97083d10c465b7612521",
+      "log_sha256": "d93861229b9d5d614c19a30848ad64f10e64f5440b0ef457bfbf38898e0fea28",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -112,7 +113,7 @@
         "ladder_10000": "passed"
       },
       "log": "reports/logs/scale.log",
-      "log_sha256": "f592740b371e511b6fb69e21e316f305d921a0e2f33f9718c6a3ac2fed521dc1"
+      "log_sha256": "2e2330da50223b8ee025f5d5edd9de5820377dbaacee9124a04c271590b4e336"
     },
     "platform": {
       "status": "not_run",
@@ -123,39 +124,39 @@
   "metrics": {
     "total": {
       "total": 48,
-      "implemented": 42,
-      "evidenced": 29,
-      "implementation_percent": 87.5,
-      "evidenced_percent": 60.42
+      "implemented": 47,
+      "evidenced": 47,
+      "implementation_percent": 97.92,
+      "evidenced_percent": 97.92
     },
     "categories": {
       "Analyses": {
         "total": 8,
         "implemented": 8,
-        "evidenced": 4,
+        "evidenced": 8,
         "implementation_percent": 100.0,
-        "evidenced_percent": 50.0
+        "evidenced_percent": 100.0
       },
       "Numerical core": {
         "total": 8,
         "implemented": 8,
-        "evidenced": 5,
+        "evidenced": 8,
         "implementation_percent": 100.0,
-        "evidenced_percent": 62.5
+        "evidenced_percent": 100.0
       },
       "Transient integration": {
         "total": 8,
         "implemented": 8,
-        "evidenced": 5,
+        "evidenced": 8,
         "implementation_percent": 100.0,
-        "evidenced_percent": 62.5
+        "evidenced_percent": 100.0
       },
       "Devices": {
         "total": 8,
-        "implemented": 5,
-        "evidenced": 2,
-        "implementation_percent": 62.5,
-        "evidenced_percent": 25.0
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
       },
       "Netlist compatibility": {
         "total": 8,
@@ -166,10 +167,10 @@
       },
       "Library and acceptance": {
         "total": 8,
-        "implemented": 5,
-        "evidenced": 5,
-        "implementation_percent": 62.5,
-        "evidenced_percent": 62.5
+        "implemented": 7,
+        "evidenced": 7,
+        "implementation_percent": 87.5,
+        "evidenced_percent": 87.5
       }
     },
     "criteria": [
@@ -183,7 +184,7 @@
           "analytical/divider_and_source_current",
           "oracle/nonlinear_operating_points"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "A02",
@@ -205,7 +206,7 @@
         "checks": [
           "oracle/rc_ac_and_transient"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "A04",
@@ -216,7 +217,7 @@
         "checks": [
           "oracle/semiconductor_ac_capacitances"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "A05",
@@ -228,7 +229,7 @@
           "analytical/ac_rc_cutoff",
           "oracle/rc_ac_and_transient"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "A06",
@@ -307,7 +308,7 @@
           "core/device::tests::peroxide_jacobians_and_charge_conservation",
           "oracle/nonlinear_operating_points"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "N05",
@@ -319,7 +320,7 @@
           "core/simulator::reliability_tests::gmin_recovers_after_direct_newton_failure",
           "oracle/continuation_recovery_matches_original_ngspice_bias"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "N06",
@@ -331,7 +332,7 @@
           "core/simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure",
           "oracle/continuation_recovery_matches_original_ngspice_bias"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "N07",
@@ -408,7 +409,7 @@
         "checks": [
           "oracle/switching_rejections_and_restart"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "T06",
@@ -419,7 +420,7 @@
         "checks": [
           "oracle/switching_rejections_and_restart"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "T07",
@@ -431,7 +432,7 @@
           "core/simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories",
           "oracle/switching_rejections_and_restart"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "T08",
@@ -467,7 +468,7 @@
           "oracle/rc_ac_and_transient",
           "oracle/switching_rejections_and_restart"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "D03",
@@ -485,28 +486,39 @@
         "id": "D04",
         "category": "Devices",
         "title": "Complete planned legacy diode electrical parameter set",
-        "implemented": false,
-        "evidence": "docs/COMPATIBILITY.md",
-        "checks": [],
-        "state": "missing"
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice"
+        ],
+        "state": "evidenced"
       },
       {
         "id": "D05",
         "category": "Devices",
         "title": "Complete planned Gummel-Poon electrical parameter set",
-        "implemented": false,
-        "evidence": "docs/COMPATIBILITY.md",
-        "checks": [],
-        "state": "missing"
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice",
+          "oracle/bjt_excess_phase_matches_reference"
+        ],
+        "state": "evidenced"
       },
       {
         "id": "D06",
         "category": "Devices",
         "title": "Complete planned MOS1 electrical parameter set",
-        "implemented": false,
-        "evidence": "docs/COMPATIBILITY.md",
-        "checks": [],
-        "state": "missing"
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice",
+          "oracle/mos1_process_and_sheet_resistance_match_reference"
+        ],
+        "state": "evidenced"
       },
       {
         "id": "D07",
@@ -518,7 +530,7 @@
           "oracle/nonlinear_operating_points",
           "oracle/semiconductor_ac_capacitances"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "D08",
@@ -529,7 +541,7 @@
         "checks": [
           "oracle/temperature_breakdown_and_base_resistance"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "P01",
@@ -685,34 +697,48 @@
         "title": "Observed Linux/macOS/Windows numerical acceptance",
         "implemented": false,
         "evidence": "docs/STATUS.md",
-        "checks": [],
+        "checks": [
+          "platform/Linux",
+          "platform/Darwin",
+          "platform/Windows"
+        ],
         "state": "missing"
       },
       {
         "id": "L07",
         "category": "Library and acceptance",
         "title": "Bistability, difficult-pivot and stiff nonlinear stress corpus",
-        "implemented": false,
-        "evidence": "docs/STATUS.md",
-        "checks": [],
-        "state": "missing"
+        "implemented": true,
+        "evidence": "crates/spice-netlist/tests/ngspice.rs",
+        "checks": [
+          "parser/bistable_latch_and_scaled_pivots",
+          "oracle/numerical_stress_corpus_matches_ngspice",
+          "oracle/stiff_nonlinear_transient_matches_reference_and_refinement",
+          "core/simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors"
+        ],
+        "state": "evidenced"
       },
       {
         "id": "L08",
         "category": "Library and acceptance",
         "title": "Full planned legacy-model regression matrix",
-        "implemented": false,
-        "evidence": "docs/STATUS.md",
-        "checks": [],
-        "state": "missing"
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "parser/every_classic_electrical_parameter_is_accepted",
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice",
+          "oracle/instance_temperature_overrides_match_ngspice"
+        ],
+        "state": "evidenced"
       }
     ],
     "oracle": {
-      "status": "failed",
-      "passed": 12,
-      "failed": 1,
+      "status": "passed",
+      "passed": 13,
+      "failed": 0,
       "discovered": 13,
-      "pass_percent": 92.31
+      "pass_percent": 100.0
     }
   }
 }

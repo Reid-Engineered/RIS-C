@@ -4,7 +4,7 @@ Rust SPICE core
 
 A library-first, pure-Rust analog simulator, using ngspice 47 as its numerical reference. Includes a circuit API, a bounded SPICE netlist parser, and a batch CLI.
 
-This is an initial implementation of the proposed core port, **not a drop-in ngspice replacement**. DC, AC, and adaptive transient analyses work for the documented device/parameter subset. Full legacy-model parameter parity and the complete release-hardening program remain unfinished; see [implementation status](docs/STATUS.md).
+This is a pure-Rust implementation of the planned classic analog core, **not a drop-in ngspice replacement**. DC, AC, and adaptive transient analyses cover the documented classic device parameters. See the [parameter audit](docs/LEGACY_PARAMETER_AUDIT.md), [implementation status](docs/STATUS.md), and live parity evidence for the exact acceptance boundary. Newer ngspice extensions and broad vendor compatibility are separate work.
 
 ## Parity tracking
 

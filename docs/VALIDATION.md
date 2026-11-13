@@ -6,8 +6,8 @@ Environment: Linux x86_64, Rust 1.100.0, release profile for the benchmark. Thes
 
 - `cargo fmt --all -- --check`
 - `cargo clippy --workspace --all-targets --locked -- -D warnings`
-- `cargo test --workspace --locked`: 32 tests passed; seven external-oracle tests intentionally ignored in the ordinary suite.
-- `NGSPICE_BIN=... cargo test -p spice-netlist --test ngspice --locked -- --ignored`: seven oracle tests passed against locally built, unmodified ngspice 47.
+- `cargo test --workspace --locked`: 37 tests passed; thirteen external-oracle tests intentionally ignored in the ordinary suite.
+- `NGSPICE_BIN=... cargo test -p spice-netlist --test ngspice --locked -- --ignored`: thirteen oracle tests passed against locally built, unmodified ngspice 47.
 
 The test suites include independent Peroxide dense solves, finite-difference checks of Peroxide-generated device derivatives, terminal charge/current conservation, RLC analytical responses, all controlled-source types, parameter scoping/cycles/includes, 2,000 deterministic malformed netlists, initial conditions, limits, singular circuits, callback cancellation, concurrent simulators, and CLI exit/output behavior.
 
@@ -21,7 +21,7 @@ Oracle coverage includes diode/NPN/PNP/MOS operating points; RC complex frequenc
 - Rejected/failed trials: deliberately oversized inverter steps exceed the error limit, and a restricted Newton budget causes failure. All accepted state (voltages, charges, derivatives, BDF history, and Meyer state) stays unchanged; retry results match a clean run for BE/trapezoidal/BDF2.
 - Stiff nonlinear transient: `examples/stiff-diode.cir` couples nanosecond diode storage to millisecond RC storage. BDF2 results are compared at all 151 output samples against a refined Rust run and ngspice with a 1 us maximum step. Voltage comparisons use `1e-6 + 1e-3 * max(abs(a), abs(b))` tolerances. The refinement test runs in the normal suite without ngspice too.
 
-The parity denominator remains the same 48 criteria. Only the five newly evidenced criteria gain credit; one stiff case does not complete the larger stress corpus.
+The parity denominator remains the same 48 criteria. The subsequent classic-core increment adds the complete canonical parameter inventory, process-derived MOS parameters, BJT excess phase and substrate configuration, instance temperatures, consistent IC networks, bistable/scaled-pivot cases, and a second stiff topology. See the [audit](LEGACY_PARAMETER_AUDIT.md) for the regression dimensions and [parity report](PARITY.md) for current results and native CI evidence.
 
 ## Initial sparse benchmark
 

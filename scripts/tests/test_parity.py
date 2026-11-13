@@ -93,10 +93,6 @@ class ParityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'stale'):
                 parity.check_report(root)
 
-
-if __name__ == '__main__':
-    unittest.main()
-
 class PlatformEvidenceTests(unittest.TestCase):
     def test_native_evidence_requires_all_platforms_and_current_source(self):
         module=importlib.util.spec_from_file_location('platform_check',Path(__file__).parents[1]/'platform_check.py')
@@ -113,3 +109,7 @@ class PlatformEvidenceTests(unittest.TestCase):
             for system in ['Darwin','Windows']:record['jobs'].append({**record['jobs'][0],'system':system})
             path.write_text(json.dumps(record));self.assertEqual(native.load_evidence(root)['status'],'passed')
             (root/'Cargo.toml').write_text('changed\n');self.assertEqual(native.load_evidence(root)['status'],'not_run')
+
+
+if __name__ == '__main__':
+    unittest.main()

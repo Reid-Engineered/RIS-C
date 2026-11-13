@@ -32,6 +32,17 @@ fn oracle(circuit: &str, command: &str, signals: &str) -> Vec<Vec<f64>> {
         String::from_utf8_lossy(&run.stdout),
         String::from_utf8_lossy(&run.stderr)
     );
+    let diagnostic = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    assert!(
+        !diagnostic.contains("doAnalyses:")
+            && !diagnostic.to_lowercase().contains("simulation(s) aborted")
+            && !diagnostic.contains("Error:"),
+        "ngspice analysis failed even though quit returned success: {diagnostic}"
+    );
     let text = std::fs::read_to_string(output).unwrap_or_else(|e| {
         panic!(
             "{e}: {} {}",
@@ -543,7 +554,7 @@ fn classic_transient_temperature_matrix_matches_ngspice() {
                         p * 0.65,
                         p * 0.65,
                         p * 0.001,
-                        -p * 0.2
+                        if kind == "PNP" { -3.0 } else { -0.2 }
                     ),
                     vec!["i(vc)", "i(vb)", "i(vs)"],
                 ),
@@ -554,7 +565,7 @@ fn classic_transient_temperature_matrix_matches_ngspice() {
                         p * 2.0,
                         p * 2.0,
                         p * 0.01,
-                        -p * 0.2
+                        if kind == "PNP" { -3.0 } else { -0.2 }
                     ),
                     vec!["i(vd)", "i(vg)", "i(vb)"],
                 ),
@@ -568,7 +579,10 @@ fn classic_transient_temperature_matrix_matches_ngspice() {
             s.options = parsed.solver_options;
             let mut options = TransientOptions::new(50e-9, 0.5e-9);
             options.max_step = 0.0125e-9;
-            let actual = s.transient(&options).unwrap();
+            eprintln!("transient matrix {kind}/{temp}");
+            let actual = s
+                .transient(&options)
+                .unwrap_or_else(|e| panic!("transient matrix {kind}/{temp}: {e}"));
             let expected = oracle(
                 &text,
                 &format!("tran 0.5n 50n 0 0.00625n\nlinearize {}", signals.join(" ")),

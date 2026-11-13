@@ -300,25 +300,36 @@
       "id": "D04",
       "category": "Devices",
       "title": "Complete planned legacy diode electrical parameter set",
-      "implemented": false,
-      "evidence": "docs/COMPATIBILITY.md",
-      "checks": []
+      "implemented": true,
+      "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+      "checks": [
+        "oracle/classic_parameter_matrix_matches_ngspice",
+        "oracle/classic_transient_temperature_matrix_matches_ngspice"
+      ]
     },
     {
       "id": "D05",
       "category": "Devices",
       "title": "Complete planned Gummel-Poon electrical parameter set",
-      "implemented": false,
-      "evidence": "docs/COMPATIBILITY.md",
-      "checks": []
+      "implemented": true,
+      "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+      "checks": [
+        "oracle/classic_parameter_matrix_matches_ngspice",
+        "oracle/classic_transient_temperature_matrix_matches_ngspice",
+        "oracle/bjt_excess_phase_matches_reference"
+      ]
     },
     {
       "id": "D06",
       "category": "Devices",
       "title": "Complete planned MOS1 electrical parameter set",
-      "implemented": false,
-      "evidence": "docs/COMPATIBILITY.md",
-      "checks": []
+      "implemented": true,
+      "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+      "checks": [
+        "oracle/classic_parameter_matrix_matches_ngspice",
+        "oracle/classic_transient_temperature_matrix_matches_ngspice",
+        "oracle/mos1_process_and_sheet_resistance_match_reference"
+      ]
     },
     {
       "id": "D07",
@@ -482,23 +493,37 @@
       "title": "Observed Linux/macOS/Windows numerical acceptance",
       "implemented": false,
       "evidence": "docs/STATUS.md",
-      "checks": []
+      "checks": [
+        "platform/Linux",
+        "platform/Darwin",
+        "platform/Windows"
+      ]
     },
     {
       "id": "L07",
       "category": "Library and acceptance",
       "title": "Bistability, difficult-pivot and stiff nonlinear stress corpus",
-      "implemented": false,
-      "evidence": "docs/STATUS.md",
-      "checks": []
+      "implemented": true,
+      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "checks": [
+        "parser/bistable_latch_and_scaled_pivots",
+        "oracle/numerical_stress_corpus_matches_ngspice",
+        "oracle/stiff_nonlinear_transient_matches_reference_and_refinement",
+        "core/simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors"
+      ]
     },
     {
       "id": "L08",
       "category": "Library and acceptance",
       "title": "Full planned legacy-model regression matrix",
-      "implemented": false,
-      "evidence": "docs/STATUS.md",
-      "checks": []
+      "implemented": true,
+      "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+      "checks": [
+        "parser/every_classic_electrical_parameter_is_accepted",
+        "oracle/classic_parameter_matrix_matches_ngspice",
+        "oracle/classic_transient_temperature_matrix_matches_ngspice",
+        "oracle/instance_temperature_overrides_match_ngspice"
+      ]
     }
   ]
 }

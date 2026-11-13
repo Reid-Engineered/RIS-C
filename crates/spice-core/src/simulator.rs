@@ -66,6 +66,8 @@ pub struct RunStats {
     pub gmin_attempts: usize,
     pub source_attempts: usize,
     pub dc_method: Option<DcMethod>,
+    /// Transient convergence at the representational precision floor, with updates still converged.
+    pub roundoff_limited_convergences: usize,
     pub breakpoints: usize,
     pub minimum_step: Option<f64>,
 }
@@ -358,7 +360,12 @@ impl Simulator {
         self.stats.dc_method = Some(DcMethod::SourceStepping);
         Ok(solution)
     }
-    fn residual(&self, e: &Evaluation, x: &[f64], p: &Problem<'_>) -> (Vec<f64>, Vec<f64>, f64) {
+    fn residual(
+        &self,
+        e: &Evaluation,
+        x: &[f64],
+        p: &Problem<'_>,
+    ) -> (Vec<f64>, Vec<f64>, f64, f64) {
         let data = &self.circuit.0;
         let mut f = e.f.clone();
         let mut jac = e.g.clone();
@@ -391,22 +398,38 @@ impl Simulator {
                 scale[r] = x[r].abs().max(v.abs());
             }
         }
-        let norm = f
-            .iter()
-            .enumerate()
-            .map(|(k, v)| {
-                let voltage_equation =
-                    k >= data.nvolt || p.constraints.is_some_and(|m| m.contains_key(&k));
-                v.abs()
-                    / (if voltage_equation {
-                        self.options.vntol
-                    } else {
-                        self.options.abstol
-                    } + self.options.reltol * scale[k])
-            })
-            .fold(0.0_f64, f64::max);
-        (f, jac, norm)
+        // Discretized storage subtracts nearly equal charges. Bound roundoff in
+        // both the charge values and their voltage/flux arguments rather than
+        // rejecting a converged update against an unrepresentable residual.
+        let mut rounding = vec![0.0; f.len()];
+        if let Some(dynamic) = &p.dynamic {
+            for (k, bound) in rounding.iter_mut().enumerate() {
+                *bound = dynamic.a0.abs() * (e.q[k].abs() + dynamic.reference[k].abs())
+                    + dynamic.history[k].abs();
+            }
+            for (slot, &(row, col)) in data.pattern.coords.iter().enumerate() {
+                rounding[row] += jac[slot].abs() * x[col].abs();
+            }
+            for bound in &mut rounding {
+                *bound *= 16.0 * f64::EPSILON;
+            }
+        }
+        let mut norm = 0.0_f64;
+        let mut requested_norm = 0.0_f64;
+        for (k, value) in f.iter().enumerate() {
+            let voltage_equation =
+                k >= data.nvolt || p.constraints.is_some_and(|m| m.contains_key(&k));
+            let tolerance = if voltage_equation {
+                self.options.vntol
+            } else {
+                self.options.abstol
+            } + self.options.reltol * scale[k];
+            requested_norm = requested_norm.max(value.abs() / tolerance);
+            norm = norm.max(value.abs() / (tolerance + rounding[k]));
+        }
+        (f, jac, norm, requested_norm)
     }
+
     fn newton(&mut self, start: &[f64], p: &Problem<'_>) -> Result<Vec<f64>> {
         let mut x = start.to_vec();
         let mut last = f64::INFINITY;
@@ -422,7 +445,7 @@ impl Simulator {
                 .circuit
                 .0
                 .evaluate_storage(&x, p.time, p.scale, p.source, p.storage)?;
-            let (f, jac, norm) = self.residual(&e, &x, p);
+            let (f, jac, norm, requested_norm) = self.residual(&e, &x, p);
             last = norm;
             let rhs: Vec<_> = f.iter().map(|v| -v).collect();
             self.stats.factorizations += 1;
@@ -440,6 +463,9 @@ impl Simulator {
                 })
                 .fold(0.0_f64, f64::max);
             if norm <= 1.0 && update <= 1.0 {
+                if requested_norm > 1.0 {
+                    self.stats.roundoff_limited_convergences += 1;
+                }
                 return Ok(x);
             }
             // Dampen voltage updates, then backtrack on the actual nonlinear residual.
@@ -485,7 +511,7 @@ impl Simulator {
                     .0
                     .evaluate_storage(&candidate, p.time, p.scale, p.source, p.storage)
                 {
-                    let (nf, _, n) = self.residual(&next, &candidate, p);
+                    let (nf, _, n, _) = self.residual(&next, &candidate, p);
                     if merit(&nf) < baseline || n <= 1.0 || attempt == 15 {
                         break;
                     }
@@ -903,7 +929,7 @@ mod reliability_tests {
         );
         assert!((signal("i(v)") + current).abs() < 1e-12);
         let e = c.0.evaluate(solution, None, 1.0, None).unwrap();
-        let (_, _, residual) = simulator.residual(&e, solution, &Problem::default());
+        let (_, _, residual, _) = simulator.residual(&e, solution, &Problem::default());
         assert!(residual <= 1.0, "original scaled residual is {residual}");
     }
 
@@ -1187,5 +1213,57 @@ mod excess_phase_history_tests {
             .take_step(&accepted, 0.25e-9, IntegrationMethod::Trapezoidal)
             .unwrap();
         assert_eq!(retry, expected);
+    }
+}
+
+#[cfg(test)]
+mod precision_floor_tests {
+    use super::*;
+    #[test]
+    fn sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors() {
+        let mut b = CircuitBuilder::new();
+        let input = b.node("in");
+        let output = b.node("out");
+        let ground = NodeId::GROUND;
+        b.add("v", &[input, ground], Element::Voltage(2.0.into()))
+            .unwrap();
+        b.add("r", &[input, output], Element::Resistor(1000.0))
+            .unwrap();
+        b.add(
+            "c",
+            &[output, ground],
+            Element::Capacitor {
+                capacitance: 1.0,
+                ic: None,
+            },
+        )
+        .unwrap();
+        b.initial_voltage(output, 1.0).unwrap();
+        let circuit = b.build().compile().unwrap();
+        let mut s = circuit.simulator();
+        s.options = SolverOptions::precise();
+        let history = s.initialize(false).unwrap();
+        let next = s
+            .take_step(&history, 1e-15, IntegrationMethod::BackwardEuler)
+            .unwrap();
+        let index = circuit
+            .signals()
+            .iter()
+            .position(|n| n == "v(out)")
+            .unwrap();
+        // Exact change is about 1e-18 V, below one ULP at the 1 V bias.
+        assert_eq!(next.x[index], 1.0);
+        assert!(s.stats.roundoff_limited_convergences > 0);
+        let mut bad = history.clone();
+        let input = circuit.signals().iter().position(|n| n == "v(in)").unwrap();
+        bad.x[input] = 1.0;
+        s.options.max_iterations = 1;
+        assert!(
+            matches!(
+                s.take_step(&bad, 1e-15, IntegrationMethod::BackwardEuler),
+                Err(Error::Convergence { .. })
+            ),
+            "an unresolved ideal-source constraint must still fail"
+        );
     }
 }

@@ -23,9 +23,9 @@ Compatibility means documented equations and numerical agreement on the fixture 
 | V / I | DC, complex AC magnitude/phase, PULSE, SIN, PWL |
 | E / G | Four nodes and one linear gain |
 | F / H | Two nodes, controlling branch device, gain |
-| D | Two nodes, model, optional area and M |
-| Q | C B E [substrate] model, optional area and M; omitted substrate is ground |
-| M | D G S B model, L/W/AD/AS/PD/PS/M |
+| D | Two nodes, model, optional area, M, TEMP/DTEMP, OFF, and IC |
+| Q | C B E [substrate] model, area/M, TEMP/DTEMP, OFF, IC=VBE,VCE; omitted substrate is ground |
+| M | D G S B model, L/W/AD/AS/PD/PS/M/NRD/NRS, TEMP/DTEMP, OFF, IC=VDS,VGS,VBS |
 
 RLC temperature coefficients, nonlinear passive elements, mutual inductance, switches, transmission lines, and other families are unsupported. F/H controls must name a device with an allocated branch current (voltage source, inductor, E or H).
 
@@ -33,21 +33,21 @@ Sources require explicit finite pulse rise/fall times greater than zero and a pe
 
 ## Semiconductor model parameters
 
-Names below are the exhaustive accepted sets, plus `LEVEL=1`. Parameters outside these lists are errors, including noise-only parameters even though noise analysis is excluded.
+The [classic electrical audit](LEGACY_PARAMETER_AUDIT.md) defines the legacy completion target. Names below are the canonical accepted sets, plus `LEVEL=1` and standard aliases (including TREF, diode JS/CJ0/PB/MJ, and BJT VA/VB/IK/PE/ME/PC/MC/CCS/PS/MS). Parameters outside these lists are errors, including noise-only parameters even though noise analysis is excluded.
 
 | Model | Accepted parameters |
 | --- | --- |
 | D | IS N RS CJO VJ M FC TT BV IBV EG XTI TNOM |
-| NPN / PNP | IS BF BR NF NR VAF VAR IKF IKR ISE ISC NE NC RB RBM IRB RC RE ISS NS CJE VJE MJE CJC VJC MJC XCJC CJS VJS MJS TF TR XTF VTF ITF FC EG XTI XTB TNOM |
-| NMOS / PMOS | VTO (VT0) KP GAMMA PHI LAMBDA RD RS CBD CBS CJ CJSW MJ MJSW PB FC IS JS CGSO CGDO CGBO TOX LD UO (U0) TNOM |
+| NPN / PNP | IS BF BR NF NR VAF VAR IKF IKR ISE ISC NE NC RB RBM IRB RC RE ISS NS CJE VJE MJE CJC VJC MJC XCJC CJS VJS MJS TF TR XTF VTF ITF PTF FC EG XTI XTB SUBS TNOM |
+| NMOS / PMOS | VTO (VT0) KP GAMMA PHI LAMBDA RD RS CBD CBS CJ CJSW MJ MJSW PB FC IS JS CGSO CGDO CGBO TOX LD UO (U0) NSUB TPG NSS RSH TNOM |
 
-Temperature scaling covers the default silicon temperature laws and the listed parameters. Internal series resistance nodes are allocated. BJTs include high injection, Early effect, leakage, nonlinear base resistance, charge storage, substrate current/capacitance, and external base-collector charge splitting. MOS1 includes bidirectional channel operation, body diodes, depletion/overlap capacitances, and history-dependent intrinsic Meyer capacitances when TOX is provided. KP is derived from TOX/UO when KP is absent. Process-derived PHI/GAMMA/VTO through NSUB/TPG/NSS and RSH-based geometry are not yet implemented. BJT excess phase PTF and newer quasi-saturation/temperature extensions are not implemented. Extended diode recombination, sidewall, high-injection, and self-heating parameters are not implemented.
+Temperature scaling covers the default silicon temperature laws and the listed parameters. Internal series resistance nodes are allocated. BJTs include high injection, Early effect, leakage, nonlinear base resistance, charge storage, substrate current/capacitance, and external base-collector charge splitting. MOS1 includes bidirectional channel operation, body diodes, depletion/overlap capacitances, and history-dependent intrinsic Meyer capacitances when TOX is provided. KP is derived from TOX/UO when KP is absent. Process-derived PHI/GAMMA/VTO through NSUB/TPG/NSS and RSH/NRD/NRS geometry are implemented with explicit-parameter precedence. BJT excess phase PTF is implemented in AC and transient; newer quasi-saturation/alternative temperature-law extensions are not. Default NPN uses a vertical substrate connection; default PNP uses a lateral base connection. SUBS overrides it. Extended diode recombination, sidewall, high-injection, and self-heating parameters are not implemented.
 
 The nonlinear exponential is exact through argument 700 and has a linear overflow guard above it; extremely high forward-bias operating points are outside the validated range.
 
 ## Initial conditions and limits
 
-Default transient initialization solves a constrained bias with `.ic` values, then releases those constraints. UIC starts from the supplied voltage/inductor-current history and zero elsewhere. It does not promise consistent algebraic values in the initial sample; the first step solves the circuit. Nonzero inductor IC requires UIC. Floating two-terminal capacitor ICs fix a reference terminal if neither terminal has a specified initial voltage. Conflicting conditions are errors.
+Default transient initialization solves a constrained bias with `.ic` node values, then releases those constraints. Element IC attributes apply only with UIC, as in SPICE. UIC starts from the supplied capacitor/semiconductor voltage and inductor-current history and zero elsewhere; its initial sample need not satisfy every algebraic equation. Voltage-difference constraints are solved together, including floating networks and consistent loops; contradictory loops and conflicts with imposed ideal sources return errors. A free common-mode reference uses the initial node hint or zero. Redundant ICs on an ideal-source component do not replace extra KCL equations. TEMP overrides circuit temperature and DTEMP; without TEMP, DTEMP adds to circuit temperature. OFF is an initialization hint, not a switch that disables device conduction.
 
 Default Newton tolerances: RELTOL=1e-3, VNTOL=1e-6 V, ABSTOL=1e-12 A, 100 iterations. Transient error control has a separate relative tolerance (default 1e-3). `SolverOptions::precise` tightens these for validation. Minimum step, retries, total steps, expansion size, expression size, and grid size are bounded. A failed transient leaves no cached successful bias; callers must treat streamed samples as partial until the operation returns success.
 
