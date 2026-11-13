@@ -1,0 +1,15 @@
+Common-emitter amplifier
+.param supply=12
+Vcc vcc 0 {supply}
+Vin drive 0 DC 0 AC 1 SIN(0 1m 1k)
+Cin drive base 10u
+R1 vcc base 100k
+R2 base 0 22k
+Rc vcc collector 2k
+Re emitter 0 1k
+Q1 collector base emitter small
+.model small NPN (IS=1e-14 BF=150 VAF=100 CJE=10p CJC=3p TF=300p)
+.op
+.ac dec 10 1 1meg
+.tran 10u 3m
+.end
