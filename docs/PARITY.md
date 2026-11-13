@@ -1,6 +1,6 @@
 # Core parity report
 
-Scope: **core-v1.0**, reference **ngspice 47**. Generated 2026-11-13T22:13:14+00:00.
+Scope: **core-v1.0**, reference **ngspice 47**. Generated 2026-11-13T22:17:18+00:00.
 
 **Evidence-backed checklist coverage: 97.92% (47/48).**
 
@@ -80,4 +80,4 @@ Run `python3 scripts/parity.py --check` to detect stale source inputs, changed s
 
 The denominator is versioned in [parity-scope.json](../reports/parity-scope.json). Changing criteria requires a scope-version bump and an entry in its change log; compare history only within the same scope version. [History](../reports/parity-history.jsonl) records source/metric changes without duplicating identical reruns. [Machine-readable snapshot](../reports/parity.json) contains per-suite outcomes and source hashes.
 
-Source SHA-256: `538268ee72550b5441f4162cbbf4a6fa8d3653f82235b90be5729d5b31e55673`.
+Source SHA-256: `cac3e4eeb0f5fba4108b4142d3efcbc0bc4f06e8bb25fdfe3bd89c6a3f4148ad`.

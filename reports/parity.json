@@ -2,8 +2,8 @@
   "schema_version": 1,
   "scope_version": "core-v1.0",
   "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
-  "generated_at": "2026-11-13T22:13:14+00:00",
-  "source_sha256": "538268ee72550b5441f4162cbbf4a6fa8d3653f82235b90be5729d5b31e55673",
+  "generated_at": "2026-11-13T22:17:18+00:00",
+  "source_sha256": "cac3e4eeb0f5fba4108b4142d3efcbc0bc4f06e8bb25fdfe3bd89c6a3f4148ad",
   "platform": "linux",
   "suites": {
     "core": {
@@ -19,7 +19,7 @@
         "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed"
       },
       "log": "reports/logs/core.log",
-      "log_sha256": "649e46907e4e7b9e7287cb1b3dd22176cc5fbb8cb0b9d325fe283e0a0bbb6d3d"
+      "log_sha256": "cd10fb7e543578831ae315e089996253a89b6123e583ad61cd8ddc447a265ca4"
     },
     "analytical": {
       "status": "passed",
@@ -41,7 +41,7 @@
         "tolerances_and_limits_are_checked": "passed"
       },
       "log": "reports/logs/analytical.log",
-      "log_sha256": "713fe3267db6094de9a49858d9dd4bcd4710d0e08f3d3ef53e98cacb54e5c588"
+      "log_sha256": "8535a3ea5af2d2a21bacba37b451d611cc559d3e402a0b297786a72dc017bee2"
     },
     "expressions": {
       "status": "passed",
@@ -51,7 +51,7 @@
         "expression::tests::expressions": "passed"
       },
       "log": "reports/logs/expressions.log",
-      "log_sha256": "7b32d2dfa89f89a234a629e285bafca1d5b48f943187c1943ff89bf76f1ecbe3"
+      "log_sha256": "56f9576595105d33fa11c41d3d43da73e08ef8f12fc65cc5a88dbefaefd34ff2"
     },
     "parser": {
       "status": "passed",
@@ -72,7 +72,7 @@
         "stiff_diode_transient_converges_under_refinement": "passed"
       },
       "log": "reports/logs/parser.log",
-      "log_sha256": "2cf92fb2cb94dd50cf7b2c014096a4134782ea3ddc579d8d96ed16da061b8e49"
+      "log_sha256": "f62152401fe875534ea861c3a39e2b0c2e24cb44f77d153cc9ac02593b442945"
     },
     "cli": {
       "status": "passed",
@@ -82,7 +82,7 @@
         "stdout_csv_and_failure_exit": "passed"
       },
       "log": "reports/logs/cli.log",
-      "log_sha256": "c3678929fdc3a74a25f3562b0978afd307dff401e5dcbd4064d54d1632f4326d"
+      "log_sha256": "49333960a2dac2170a3053ca81c34627ee08542d2d6a929ca5d5c2a893b50c98"
     },
     "oracle": {
       "status": "passed",
@@ -103,7 +103,7 @@
         "temperature_breakdown_and_base_resistance": "passed"
       },
       "log": "reports/logs/oracle.log",
-      "log_sha256": "f247c09b66992bfe4dabb9f6272de914855cebb362b96ed091eae47e8803e3f3",
+      "log_sha256": "410ed686e29eff87eb3a014236809c7f88341e4648d76c36bbb508e128e391d5",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -114,7 +114,7 @@
         "ladder_10000": "passed"
       },
       "log": "reports/logs/scale.log",
-      "log_sha256": "5e6ba66a64d4fbb1ba10180620d69b75f5caad71da3729abdbab5038dbd304e3"
+      "log_sha256": "56a13391897c120e3585ef079cb5bb73d53f7430d496b264a00bd134548f6f76"
     },
     "platform": {
       "status": "not_run",

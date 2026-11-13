@@ -583,8 +583,15 @@ fn classic_transient_temperature_matrix_matches_ngspice() {
             let actual = s
                 .transient(&options)
                 .unwrap_or_else(|e| panic!("transient matrix {kind}/{temp}: {e}"));
+            // Keep the reference solve tighter than the waveform comparison, without
+            // driving hot PNP excess-phase startup below representable charge changes.
+            // The Rust solve above retains the stricter original tolerances.
+            let reference_text = text.replace(
+                "reltol=1e-8 vntol=1e-10 abstol=1e-14",
+                "reltol=1e-6 vntol=1e-8 abstol=1e-12",
+            );
             let expected = oracle(
-                &text,
+                &reference_text,
                 &format!("tran 0.5n 50n 0 0.00625n\nlinearize {}", signals.join(" ")),
                 &signals.join(" "),
             );

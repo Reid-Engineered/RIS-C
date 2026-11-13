@@ -25,6 +25,8 @@ Noise-only KF/AF are not electrical-target omissions: noise analysis was exclude
 
 DC/AC current tolerances are `1e-11 A + 1e-6 * magnitude`; the dedicated process/phase tests also check voltage outputs. Transient current comparisons use `1e-9 A + 2e-3 * magnitude` with an explicitly bounded internal step. These are finite fixture acceptance bounds, not a uniform error guarantee for every possible circuit.
 
+The composite transient matrix retains Rust solver tolerances of RELTOL=1e-8, VNTOL=1e-10, and ABSTOL=1e-14. The ngspice reference uses RELTOL=1e-6, VNTOL=1e-8, and ABSTOL=1e-12 with a 6.25 ps maximum step. Those reference tolerances remain below the waveform acceptance bounds and avoid a reference-side hot-PNP startup timestep collapse observed in CI; reference aborts still fail the test.
+
 A parameter perturbation is compared against the reference even when an explicit override makes that parameter inactive. Separate process and sheet-resistance cases verify those parameters without their overrides. Coverage is not represented as exhaustive combinations of every parameter value or circuit topology.
 
 ## Corrections exposed by the matrix
