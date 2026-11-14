@@ -1,6 +1,6 @@
 # Coupling and switch expansion report
 
-Scope: **coupling-switches-v1.0**, reference **ngspice 47**. Generated 2026-11-14T00:40:11+00:00.
+Scope: **coupling-switches-v1.0**, reference **ngspice 47**. Generated 2026-11-14T00:51:05+00:00.
 
 **Evidence-backed checklist coverage: 100.00% (8/8).**
 
@@ -37,4 +37,4 @@ Run `python3 scripts/expansion.py --check` to detect stale source inputs, change
 
 The denominator is versioned in [expansion-scope.json](../reports/expansion-scope.json). Changing criteria requires a scope-version bump and an entry in its change log; compare history only within the same scope version. [History](../reports/expansion-history.jsonl) records source/metric changes without duplicating identical reruns. [Machine-readable snapshot](../reports/expansion.json) contains per-suite outcomes and source hashes.
 
-Source SHA-256: `44e9e274ee98f9bb640a27140e746be53fdbd96e6104f5f71cee6e3719e9aa30`.
+Source SHA-256: `7e9db3d335ed33dfe106969fc1fb42e01fc2743817c2857f5f1aaa03f8434a1b`.

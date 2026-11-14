@@ -18,6 +18,7 @@ HISTORY = Path('reports/parity-history.jsonl')
 REPORT_TITLE = 'Core parity report'
 REPORT_SCRIPT = 'parity.py'
 SCOPE_LABEL = 'agreed core'
+LOG_DIRECTORY = Path('reports/logs')
 SUITES = {
     'core': ['-p', 'spice-core', '--lib'],
     'analytical': ['-p', 'spice-core', '--test', 'analytical'],
@@ -120,7 +121,7 @@ def parse_tests(output):
 
 
 def execute(root, name, command, expected=None):
-    logs = root / 'reports/logs'
+    logs = root / LOG_DIRECTORY
     logs.mkdir(parents=True, exist_ok=True)
     try:
         run = subprocess.run(command, cwd=root, text=True, stdout=subprocess.PIPE,
@@ -133,7 +134,7 @@ def execute(root, name, command, expected=None):
         returncode = run.returncode
     except (OSError, subprocess.TimeoutExpired) as error:
         output, tests, status, returncode = str(error), {}, 'failed', None
-    logfile = Path(f'reports/logs/{name}.log')
+    logfile = LOG_DIRECTORY / f'{name}.log'
     (root / logfile).write_text(output)
     print(f'{name}: {status} ({len(tests)} checks)', flush=True)
     return {'status': status, 'returncode': returncode, 'tests': tests,

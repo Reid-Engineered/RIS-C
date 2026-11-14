@@ -2,8 +2,8 @@
   "schema_version": 1,
   "scope_version": "core-v1.0",
   "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
-  "generated_at": "2026-11-14T00:40:51+00:00",
-  "source_sha256": "fa51fd92f9d626d88a5e99e4fb73ecc41337bcf5f964b9c4973a861bd326c92b",
+  "generated_at": "2026-11-14T00:50:42+00:00",
+  "source_sha256": "2bd23cc4ad13a6507103fa1d3c31676c8e39256538f6c89a1401f07d4865dfee",
   "platform": "linux",
   "suites": {
     "core": {
@@ -20,7 +20,7 @@
         "simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry": "passed"
       },
       "log": "reports/logs/core.log",
-      "log_sha256": "70d8cb959b55053bfa03e5435adde212e2062589717dda338437e2b8adc767f3"
+      "log_sha256": "1397a3b650d4fd086ce0f3a96c56af98e21efaf59fe079cb62de26eafb65fbb0"
     },
     "analytical": {
       "status": "passed",
@@ -42,7 +42,7 @@
         "tolerances_and_limits_are_checked": "passed"
       },
       "log": "reports/logs/analytical.log",
-      "log_sha256": "a8ee2e9922914b3312bb44e770b6a184953412257000584ee9b8f50ca44395d8"
+      "log_sha256": "6d346aed63417b3cbd786945c4e973db0f356bb6488086a267ed3d08f3a3508f"
     },
     "expressions": {
       "status": "passed",
@@ -52,7 +52,7 @@
         "expression::tests::expressions": "passed"
       },
       "log": "reports/logs/expressions.log",
-      "log_sha256": "33c3f34a026aed2e04ed919d07732cf69d0a4a294742e110634ec75128067d32"
+      "log_sha256": "56f9576595105d33fa11c41d3d43da73e08ef8f12fc65cc5a88dbefaefd34ff2"
     },
     "parser": {
       "status": "passed",
@@ -73,7 +73,7 @@
         "stiff_diode_transient_converges_under_refinement": "passed"
       },
       "log": "reports/logs/parser.log",
-      "log_sha256": "1bbeb57358b923a49faed8dee8ec4b6745f697192926bfe4b3202e13ca1e687e"
+      "log_sha256": "582e9ae3ab756e9b724113cf8b7de09340f78ed950d01668c9378fa9df78c777"
     },
     "expansion": {
       "status": "passed",
@@ -88,7 +88,7 @@
         "transformer_ac_transfer_and_polarity": "passed"
       },
       "log": "reports/logs/expansion.log",
-      "log_sha256": "55cdc9f3134ad7acb3f013e6aa815ee4963409a234b282fd093ff7b8d9f8c3a0"
+      "log_sha256": "1bc673af16fa33bd3f2b7105d5f2eb0ecad2bdff3faeff64f977248f312c378d"
     },
     "cli": {
       "status": "passed",
@@ -98,7 +98,7 @@
         "stdout_csv_and_failure_exit": "passed"
       },
       "log": "reports/logs/cli.log",
-      "log_sha256": "288fbe4be19efe8ae2620f7d812077446ae6889f5a2671ae8c1d20eca8a762d7"
+      "log_sha256": "4175948c090198d46e825597cda97118101c933a6a043d4bfa8029a084e58100"
     },
     "oracle": {
       "status": "passed",
@@ -122,7 +122,7 @@
         "temperature_breakdown_and_base_resistance": "passed"
       },
       "log": "reports/logs/oracle.log",
-      "log_sha256": "2abb51f8265470faf661126fdd99206e62f13b4285ab58b7a4af1dfc09adbb25",
+      "log_sha256": "5567c2d4126d5b1ffccc21abdcb3fda5de930c0b6521f0550249f01eed27e264",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -133,21 +133,25 @@
         "ladder_10000": "passed"
       },
       "log": "reports/logs/scale.log",
-      "log_sha256": "be42631b66728e9d5706c45fde01710bd6380d8ec80f968f70e7551d9d382c0d"
+      "log_sha256": "d606c28329c6c63c9840bacf3fe42dd62a98a835c73d20db9f8fc4d540c52736"
     },
     "platform": {
-      "status": "not_run",
-      "tests": {},
-      "reason": "native evidence is stale for this numerical source"
+      "status": "passed",
+      "tests": {
+        "Linux": "passed",
+        "Darwin": "passed",
+        "Windows": "passed"
+      },
+      "evidence": "reports/platform-evidence.json"
     }
   },
   "metrics": {
     "total": {
       "total": 48,
       "implemented": 48,
-      "evidenced": 47,
+      "evidenced": 48,
       "implementation_percent": 100.0,
-      "evidenced_percent": 97.92
+      "evidenced_percent": 100.0
     },
     "categories": {
       "Analyses": {
@@ -188,9 +192,9 @@
       "Library and acceptance": {
         "total": 8,
         "implemented": 8,
-        "evidenced": 7,
+        "evidenced": 8,
         "implementation_percent": 100.0,
-        "evidenced_percent": 87.5
+        "evidenced_percent": 100.0
       }
     },
     "criteria": [
@@ -722,7 +726,7 @@
           "platform/Darwin",
           "platform/Windows"
         ],
-        "state": "implemented, evidence incomplete"
+        "state": "evidenced"
       },
       {
         "id": "L07",

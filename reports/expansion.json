@@ -2,8 +2,8 @@
   "schema_version": 1,
   "scope_version": "coupling-switches-v1.0",
   "scope_sha256": "2b4def536b09ff943e492c7cd295cdade0f0c03e989bd4a3ff6b69cff95cad97",
-  "generated_at": "2026-11-14T00:40:11+00:00",
-  "source_sha256": "44e9e274ee98f9bb640a27140e746be53fdbd96e6104f5f71cee6e3719e9aa30",
+  "generated_at": "2026-11-14T00:51:05+00:00",
+  "source_sha256": "7e9db3d335ed33dfe106969fc1fb42e01fc2743817c2857f5f1aaa03f8434a1b",
   "platform": "linux",
   "suites": {
     "core": {
@@ -19,8 +19,8 @@
         "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed",
         "simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry": "passed"
       },
-      "log": "reports/logs/core.log",
-      "log_sha256": "3e1439d69ce915d707519dbb71d9ee7b862344afbe118aa9d743f2752d2ecbcb"
+      "log": "reports/logs/expansion/core.log",
+      "log_sha256": "75fb90e105b2c1e6c466efb8e9be5801d4f8b308eac3a324c779397e86c860c8"
     },
     "expansion": {
       "status": "passed",
@@ -34,8 +34,8 @@
         "switch_models_and_controls_are_instance_scoped": "passed",
         "transformer_ac_transfer_and_polarity": "passed"
       },
-      "log": "reports/logs/expansion.log",
-      "log_sha256": "a3ac04f5ad9e549ca175ec60dae9b1d73dcfe4a13e1f56eb05ec13fef426d15d"
+      "log": "reports/logs/expansion/expansion.log",
+      "log_sha256": "13ee0dc0343e6167db04bddaad9af0e2eb41deca41fa47ecd55348aa25fd4c5e"
     },
     "oracle": {
       "status": "passed",
@@ -45,8 +45,8 @@
         "expansion_switches_match_reference": "passed",
         "expansion_transformer_matches_reference": "passed"
       },
-      "log": "reports/logs/oracle.log",
-      "log_sha256": "6f62c466529c896363c723ef3ae9655a9dbfc640d6fac734c7bb4a34dbb387e9",
+      "log": "reports/logs/expansion/oracle.log",
+      "log_sha256": "6536b795c0a2070c457a302def520c917f1b5a9c1ca3cc770595cc076015960f",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -56,13 +56,17 @@
       "tests": {
         "ladder_10000": "passed"
       },
-      "log": "reports/logs/scale.log",
-      "log_sha256": "94adc7b401712621dc83b65bc24a0554f80dae9eef989f1e6d0e7441d12542cb"
+      "log": "reports/logs/expansion/scale.log",
+      "log_sha256": "ad476af7ab84db9e2c295378c00884b434d457d768c4210d174599235cb7e040"
     },
     "platform": {
-      "status": "not_run",
-      "tests": {},
-      "reason": "native evidence is stale for this numerical source"
+      "status": "passed",
+      "tests": {
+        "Linux": "passed",
+        "Darwin": "passed",
+        "Windows": "passed"
+      },
+      "evidence": "reports/platform-evidence.json"
     }
   },
   "metrics": {

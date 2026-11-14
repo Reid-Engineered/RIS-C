@@ -2,6 +2,9 @@
 import copy
 import importlib.util
 import json
+import hashlib
+import sys
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import unittest
@@ -22,6 +25,18 @@ def scope():
 
 
 class ParityTests(unittest.TestCase):
+    def test_profile_logs_preserve_independent_evidence_digests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            command = [sys.executable, '-c', "print('test witness ... ok')"]
+            core = parity.execute(root, 'oracle', command)
+            with patch.object(parity, 'LOG_DIRECTORY', Path('reports/logs/expansion')):
+                expansion = parity.execute(root, 'oracle', command)
+            self.assertNotEqual(core['log'], expansion['log'])
+            for record in [core, expansion]:
+                self.assertEqual(record['status'], 'passed')
+                self.assertEqual(record['log_sha256'], hashlib.sha256((root/record['log']).read_bytes()).hexdigest())
+
     def test_missing_items_remain_in_denominator(self):
         metrics = parity.calculate(scope(), {'core': {'status': 'passed', 'tests': {'witness': 'passed'}}})
         self.assertEqual(metrics['total']['implementation_percent'], 50.0)

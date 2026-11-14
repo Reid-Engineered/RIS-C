@@ -1,6 +1,6 @@
 # Local validation
 
-Local environment: Linux x86_64, Rust 1.100.0, release profile for the benchmark. Native CI has additionally executed and passed all 38 local tests on Linux x86-64, macOS ARM64, and Windows AMD64 for the numerical source recorded in [platform-evidence.json](../reports/platform-evidence.json). The record includes job URLs, runtime platform/architecture, commit/run IDs, source fingerprints, test counts, and log digests; it is validated against the current numerical source before the platform criterion receives credit.
+Local environment: Linux x86_64, Rust 1.100.0, release profile for the benchmark. Native CI has additionally executed and passed all 46 local tests on Linux x86-64, macOS ARM64, and Windows AMD64 for the numerical source recorded in [platform-evidence.json](../reports/platform-evidence.json). The record includes job URLs, runtime platform/architecture, commit/run IDs, source fingerprints, test counts, and log digests; it is validated against the current numerical source before the platform criterion receives credit.
 
 ## Checks
 
