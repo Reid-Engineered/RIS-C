@@ -1,0 +1,17 @@
+[package]
+name = "risc-c"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Embed pure-Rust SPICE simulation with one dependency"
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["spice", "circuit", "simulation", "electronics"]
+categories = ["science", "simulation"]
+
+[dependencies]
+risc-c-core = { version = "0.1.0", path = "../risc-c-core" }
+risc-c-netlist = { version = "0.1.0", path = "../risc-c-netlist" }
+thiserror.workspace = true

@@ -15,6 +15,15 @@ fn dir() -> PathBuf {
 }
 #[test]
 fn stdout_csv_and_failure_exit() {
+    let version = Command::new(env!("CARGO_BIN_EXE_spice"))
+        .arg("--version")
+        .output()
+        .unwrap();
+    assert!(version.status.success());
+    assert_eq!(
+        String::from_utf8(version.stdout).unwrap().trim(),
+        format!("spice {}", env!("CARGO_PKG_VERSION"))
+    );
     let d = dir();
     let input = d.join("divider.cir");
     std::fs::write(

@@ -4,12 +4,15 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+description = "Batch SPICE simulation with CSV output, powered by RIS-C"
+repository.workspace = true
+homepage.workspace = true
 
 [[bin]]
 name = "spice"
 path = "src/main.rs"
 
 [dependencies]
-risc-c-core = { path = "../risc-c-core" }
-risc-c-netlist = { path = "../risc-c-netlist" }
+risc-c-core = { version = "0.1.0", path = "../risc-c-core" }
+risc-c-netlist = { version = "0.1.0", path = "../risc-c-netlist" }
 

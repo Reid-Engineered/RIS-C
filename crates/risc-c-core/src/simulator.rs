@@ -95,6 +95,19 @@ pub struct AcSample {
     pub frequency: f64,
     pub values: Vec<Complex64>,
 }
+impl AcSample {
+    /// Read a complex signal by its case-insensitive name, such as `v(out)`.
+    pub fn get(&self, circuit: &CompiledCircuit, name: &str) -> Option<Complex64> {
+        if name.eq_ignore_ascii_case("v(0)") {
+            return Some(Complex64::new(0.0, 0.0));
+        }
+        circuit
+            .signals()
+            .iter()
+            .position(|s| s.eq_ignore_ascii_case(name))
+            .map(|k| self.values[k])
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntegrationMethod {
     BackwardEuler,
