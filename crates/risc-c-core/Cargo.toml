@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+description = "Reentrant pure-Rust SPICE analog circuit simulation engine"
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 faer.workspace = true

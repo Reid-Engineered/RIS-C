@@ -1,0 +1,25 @@
+# RIS-C
+
+> Pure-Rust SPICE analog circuit simulation for embedding in Rust applications
+> or invoking from any language through the spice CLI.
+
+Use the `risc-c` package (`risc_c` in Rust) for a single dependency that includes
+the circuit API and netlist runner. Git installation is documented; no registry
+release or native numerical runtime is required. The CLI package is `risc-c-cli`
+and the executable is `spice`.
+
+## Integration
+
+- [Agent integration brief](docs/AGENT_INTEGRATION.md): exact APIs, contracts, and implementation prompt.
+- [Human integration guide](docs/INTEGRATION.md): install, pin, run, read results, handle errors, stream, and use subprocesses.
+- [Facade API and quick example](crates/risc-c/README.md).
+- [Compatibility contract](docs/COMPATIBILITY.md): supported netlists, devices, parameters, and numerical limits.
+- [Rust examples](crates/risc-c/examples): netlist, builder, transient, AC, and streaming recipes.
+- [Python CLI example](examples/integrate_cli.py).
+- [Independent-consumer check](scripts/check_integration.py).
+
+## Validation
+
+- [Validation methods](docs/VALIDATION.md).
+- [Recorded core parity evidence](docs/PARITY.md): historical snapshot with a source fingerprint.
+- [Recorded coupling/switch evidence](docs/EXPANSION.md): separate scope and fingerprint.

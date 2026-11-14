@@ -4,8 +4,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+description = "Scoped SPICE netlist parsing for the RIS-C analog simulator"
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
-risc-c-core = { path = "../risc-c-core" }
+risc-c-core = { version = "0.1.0", path = "../risc-c-core" }
 thiserror.workspace = true
 

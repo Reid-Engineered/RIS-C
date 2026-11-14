@@ -6,6 +6,52 @@ A library-first, pure-Rust analog simulator, using ngspice 47 as its numerical r
 
 This is a pure-Rust implementation of the planned classic analog core, **not a drop-in ngspice replacement**. DC, AC, and adaptive transient analyses cover the documented classic device parameters. See the [parameter audit](docs/LEGACY_PARAMETER_AUDIT.md), [implementation status](docs/STATUS.md), and live parity evidence for the exact acceptance boundary. Newer ngspice extensions and broad vendor compatibility are separate work.
 
+## Add RIS-C to your project
+
+Requires Rust 1.91+ and your platform's Rust linker (MSVC Build Tools on Windows).
+No ngspice installation or native numerical library is needed at runtime.
+
+For a Rust application:
+
+```sh
+cargo add risc-c --git https://github.com/Reid-Engineered/RIS-C
+```
+
+```rust
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let output = risc_c::run_str(
+        "Divider\nV1 in 0 10\nR1 in out 1k\nR2 out 0 1k\n.op\n.end",
+    )?;
+    let point = output.operating_point().ok_or("expected .op")?;
+    println!("v(out) = {} V", point.get(&output.circuit, "v(out)").ok_or("missing signal")?);
+    Ok(())
+}
+```
+
+Expected: **`v(out) = 5 V`**. The package name is `risc-c`; the Rust import is
+`risc_c`. Commit your application's `Cargo.lock` to retain the resolved Git
+revision. For an explicit revision, add `--rev <reviewed-commit>` to `cargo add`.
+Git is the documented distribution path; these instructions do not require a
+crates.io release.
+
+For Python, JavaScript, C#, or another language, install the CLI and consume CSV:
+
+```sh
+cargo install --git https://github.com/Reid-Engineered/RIS-C --locked risc-c-cli
+spice --version
+spice run path/to/circuit.cir --analysis op --output -
+```
+
+The installed executable is **`spice`**. Check its exit status before reading
+stdout; diagnostics go to stderr. A complete [Python subprocess example](examples/integrate_cli.py)
+uses only the standard library.
+
+- [Integration guide](docs/INTEGRATION.md): installation, typed results, units, errors, streaming, and CLI contracts.
+- [Agent integration guide](docs/AGENT_INTEGRATION.md): exact entry points and a copyable implementation brief.
+- [Runnable Rust examples](crates/risc-c/examples): netlist, builder, transient, AC, and streaming.
+- [Agent documentation index](llms.txt).
+- [Compatibility contract](docs/COMPATIBILITY.md): supported devices, parameters, and dialect limits.
+
 ## Parity tracking
 
 [Current percentage report](docs/PARITY.md) tracks the versioned core acceptance checklist, separately from the ngspice comparison pass rate. Missing and untested criteria stay in the denominator. [JSON](reports/parity.json) records test outcomes; [history](reports/parity-history.jsonl) keeps progress snapshots.
@@ -28,7 +74,7 @@ cargo run -p risc-c-cli -- run examples/buck.cir --output buck.csv
 
 ## Run
 
-Requires Rust 1.91+; tested here on Rust 1.100. No native numerical library or ngspice installation is required to run the simulator.
+From a checkout, use the same Rust toolchain requirements as above.
 
 ```sh
 cargo test --workspace --locked
@@ -38,12 +84,12 @@ cargo run -p risc-c-cli -- run examples/inverter.cir --analysis tran --output sw
 cargo run -p risc-c-cli -- run examples/stiff-diode.cir --output stiff.csv
 ```
 
-When using this session's local toolchain, substitute `scripts/cargo-local.sh` for `cargo`. Multiple declared analyses produce `results.op.csv`, `results.ac.csv`, and `results.tran.csv`. `--output -` supports a single analysis on stdout. AC columns contain real and imaginary values, frequencies are Hz, and time is seconds. Diagnostics and solver counts go to stderr. An analysis failure returns nonzero and does not publish new simulation results.
+Multiple declared analyses produce `results.op.csv`, `results.ac.csv`, and `results.tran.csv`. `--output -` supports a single analysis on stdout. AC columns contain real and imaginary values, frequencies are Hz, and time is seconds. Diagnostics and solver counts go to stderr. An analysis failure returns nonzero and does not publish new simulation results.
 
 ## Embed
 
 ```rust
-use risc_c_core::*;
+use risc_c::*;
 
 fn main() -> Result<()> {
     let mut b = CircuitBuilder::new();

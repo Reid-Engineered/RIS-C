@@ -13,10 +13,14 @@ fn main() {
     }
 }
 fn usage() -> &'static str {
-    "Usage: spice run CIRCUIT [--analysis op|dc|ac|tran] [--output results.csv]\nRuns declared analyses; multiple analyses produce suffixed files. --output - writes one analysis to stdout."
+    "Usage: spice run CIRCUIT [--analysis op|dc|ac|tran] [--output results.csv]\n       spice --version\nRuns declared analyses; multiple analyses produce suffixed files. --output - writes one analysis to stdout."
 }
 fn run() -> std::result::Result<(), Box<dyn Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
+    if args.len() == 1 && matches!(args[0].as_str(), "--version" | "-V") {
+        println!("spice {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
     if args.is_empty() || args[0] == "--help" || args[0] == "-h" {
         println!("{}", usage());
         return Ok(());
