@@ -30,7 +30,7 @@ The parity denominator remains the same 48 criteria. The subsequent classic-core
 - SW/CSW tests cover both sweep directions, negative control current, nominal frozen-bias AC, scoped models/controls, ON/OFF hints, threshold localization, and accepted-state isolation after discarded or failed trials. Direct event timing is checked within 1 ns. Reference switched-load samples avoid exact threshold instants where the reference's iteration history can choose a different boundary state.
 - `examples/buck.cir` runs at 50 kHz with BDF2, a 200 ns maximum step/output interval, finite switch resistance, and a diode freewheel path. A 100 ns refinement is compared with 15 mV/5 mA absolute bounds. A separate ngspice run uses a 25 ns maximum step; output comparisons use 10 mV + 0.3% and inductor-current comparisons use 5 mA + 0.5%. Integrated supply energy must cover load plus final storage within 10 uJ, with positive aggregate losses below 15% of supply energy.
 
-Run `python3 scripts/expansion.py --run` and `--check` to maintain the separate eight-criterion report and append-only history. The completed 48-criterion classic scope remains separate.
+Run `python3 scripts/expansion.py --run` and `--check` to maintain the separate eight-criterion report and append-only history. Both reporting scripts keep strict source-freshness checks by default. CI uses `--check --allow-stale` only to validate the integrity of checked-in snapshots, which are imported separately; its oracle job executes current sources and uploads fresh evidence. Allowing a stale snapshot does not give it current-source evidence credit. The completed 48-criterion classic scope remains separate.
 
 ## Initial sparse benchmark
 

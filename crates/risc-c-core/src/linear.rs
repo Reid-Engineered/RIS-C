@@ -83,26 +83,48 @@ impl Pattern {
             .map_err(|e| Error::Singular(format!("real LU: {e:?}")))?;
         let rhs = Mat::from_fn(self.n, 1, |r, _| b[r] / row[r]);
         let x = lu.solve(&rhs);
-        let out: Vec<_> = (0..self.n).map(|r| x[(r, 0)] / col[r]).collect();
+        let mut out: Vec<_> = (0..self.n).map(|r| x[(r, 0)] / col[r]).collect();
         if out.iter().any(|v| !v.is_finite()) {
             return Err(Error::Singular("nonfinite factorization result".into()));
         }
-        let mut residual = b.to_vec();
-        let mut scale: Vec<_> = b.iter().map(|v| v.abs()).collect();
-        for (k, &(r, c)) in self.coords.iter().enumerate() {
-            residual[r] -= a[k] * out[c];
-            scale[r] += a[k].abs() * out[c].abs();
+        for attempt in 0..3 {
+            // An ideal grounded voltage source can require an exactly zero
+            // Newton update. LU roundoff in that singleton equation otherwise
+            // has unit componentwise backward error, however small it is.
+            for (r, &target) in b.iter().enumerate() {
+                let mut nonzero = self.row_slots(r).iter().copied().filter(|&k| a[k] != 0.0);
+                if let Some(k) = nonzero.next()
+                    && nonzero.next().is_none()
+                {
+                    out[self.coords[k].1] = target / a[k];
+                }
+            }
+            let mut residual = b.to_vec();
+            let mut scale: Vec<_> = b.iter().map(|v| v.abs()).collect();
+            for (k, &(r, c)) in self.coords.iter().enumerate() {
+                residual[r] -= a[k] * out[c];
+                scale[r] += a[k].abs() * out[c].abs();
+            }
+            if residual
+                .iter()
+                .zip(&scale)
+                .all(|(r, s)| r.abs() <= 1e-8 * s.max(1e-30))
+            {
+                return Ok(out);
+            }
+            if attempt < 2 {
+                // Reuse the factorization to refine difficult scaled MNA solves;
+                // the same backward-error requirement still gates acceptance.
+                let rhs = Mat::from_fn(self.n, 1, |r, _| residual[r] / row[r]);
+                let correction = lu.solve(&rhs);
+                for r in 0..self.n {
+                    out[r] += correction[(r, 0)] / col[r];
+                }
+            }
         }
-        if residual
-            .iter()
-            .zip(&scale)
-            .any(|(r, s)| r.abs() > 1e-8 * s.max(1e-30))
-        {
-            return Err(Error::Singular(
-                "linear residual exceeds backward-error tolerance".into(),
-            ));
-        }
-        Ok(out)
+        Err(Error::Singular(
+            "linear residual exceeds backward-error tolerance".into(),
+        ))
     }
 
     pub fn solve_complex(&self, a: &[Complex64], b: &[Complex64]) -> Result<Vec<Complex64>> {

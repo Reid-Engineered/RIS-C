@@ -16,7 +16,7 @@ This workspace implements the planned classic analog core and its explicit elect
 ## Deliberate architectural departures
 
 - Peroxide supplies local automatic differentiation and the independent dense oracle. faer supplies real/complex sparse LU.
-- Step doubling controls storage variables rather than porting ngspice's truncation-error estimator. The full-step solution is accepted; half steps are isolated estimates. This costs extra evaluations but makes acceptance and rollback straightforward to inspect.
+- Step doubling controls storage variables rather than porting ngspice's truncation-error estimator. The two-half-step solution is accepted; the full step supplies the error estimate. Trial histories remain isolated until acceptance.
 - Newton differentiates nonlinear base resistance; AC freezes it at bias to reproduce ngspice's small-signal approximation.
 - No C runtime/device-model fallback. No frontend/numparam or Nutmeg port.
 

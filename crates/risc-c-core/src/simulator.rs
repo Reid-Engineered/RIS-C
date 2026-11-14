@@ -729,13 +729,28 @@ impl Simulator {
         ))
     }
     fn locate_switch_event(
-        &self,
+        &mut self,
         start: &History,
         end: &History,
         dt: f64,
         snap_end_crossing: bool,
-    ) -> Option<f64> {
+        method: IntegrationMethod,
+    ) -> Result<Option<f64>> {
         let mut event: Option<f64> = None;
+        // Controls at a threshold can differ by one ulp. As with source/output
+        // alignment, do not retry localization below representable time accuracy.
+        let time_resolution = 16.0 * f64::EPSILON * end.time.abs().max(1e-30);
+        if dt <= time_resolution {
+            return Ok(None);
+        }
+        // Endpoint controls may jump at a source breakpoint. Probe just before
+        // the endpoint before interpolating a crossing into the interval. Keep
+        // this trial isolated from accepted storage and switch histories.
+        let before_end = if start.switches != end.switches {
+            Some(self.take_step(start, dt * (1.0 - 1e-6), method)?.0)
+        } else {
+            None
+        };
         for (i, d) in self.circuit.0.devices.iter().enumerate() {
             let model = match d.element {
                 Element::VoltageSwitch { model, .. } | Element::CurrentSwitch { model, .. } => {
@@ -744,6 +759,15 @@ impl Simulator {
                 _ => continue,
             };
             if end.switches[i] == start.switches[i] {
+                continue;
+            }
+            if before_end
+                .as_ref()
+                .is_some_and(|h| h.switches[i] == start.switches[i])
+            {
+                if snap_end_crossing {
+                    event = Some(event.map_or(dt, |old| old.min(dt)));
+                }
                 continue;
             }
             let before = self.circuit.0.switch_control(d, &start.x);
@@ -757,12 +781,14 @@ impl Simulator {
             let fraction = (threshold - before) / (after - before);
             if fraction > 1e-6 && fraction < 1.0 - 1e-6 {
                 let step = dt * fraction * (1.0 + 1e-7);
-                event = Some(event.map_or(step, |old| old.min(step)));
+                if step > time_resolution {
+                    event = Some(event.map_or(step, |old| old.min(step)));
+                }
             } else if snap_end_crossing && fraction >= 1.0 - 1e-6 {
                 event = Some(event.map_or(dt, |old| old.min(dt)));
             }
         }
-        event
+        Ok(event)
     }
     /// Trial solves borrow accepted history; only the caller may commit a returned step.
     fn estimate_step(
@@ -772,15 +798,15 @@ impl Simulator {
         method: IntegrationMethod,
     ) -> Result<(History, f64, i32, Option<f64>, bool)> {
         let (full, full_c, _) = self.take_step(hist, h, method)?;
-        if let Some(event) = self.locate_switch_event(hist, &full, h, false) {
+        if let Some(event) = self.locate_switch_event(hist, &full, h, false, method)? {
             return Ok((full, 0.0, 1, Some(event), false));
         }
         let (half, _, half_roundoff) = self.take_step(hist, h * 0.5, method)?;
-        if let Some(event) = self.locate_switch_event(hist, &half, h * 0.5, true) {
+        if let Some(event) = self.locate_switch_event(hist, &half, h * 0.5, true, method)? {
             return Ok((full, 0.0, 1, Some(event), false));
         }
         let (fine, _, fine_roundoff) = self.take_step(&half, h * 0.5, method)?;
-        if let Some(event) = self.locate_switch_event(&half, &fine, h * 0.5, false) {
+        if let Some(event) = self.locate_switch_event(&half, &fine, h * 0.5, false, method)? {
             return Ok((full, 0.0, 1, Some(0.5 * h + event), false));
         }
         if half.switches != hist.switches && fine.switches != half.switches {

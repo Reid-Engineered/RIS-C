@@ -268,3 +268,80 @@ fn buck_refinement_and_power_balance() {
     );
     assert!(supplied - load - stored < 0.15 * supplied);
 }
+#[test]
+fn discontinuous_pulse_switch_controls_land_on_edges() {
+    for control in ["voltage", "current"] {
+        for threshold in [0.2, 0.5, 0.8] {
+            let switch = if control == "voltage" {
+                format!(
+                    "Vc ctrl 0 PULSE(0 1 1u 0 0 1u 3u)\nS1 rail out ctrl 0 sw\n.model sw sw(ron=1 roff=1meg vt={threshold})"
+                )
+            } else {
+                format!(
+                    "Ic 0 ctrl PULSE(0 1 1u 0 0 1u 3u)\nVsense ctrl 0 0\nW1 rail out Vsense sw\n.model sw csw(ron=1 roff=1meg it={threshold})"
+                )
+            };
+            let c = circuit(&format!(
+                "Pulse switches\nVrail rail 0 1\n{switch}\nR1 out 0 100\n.end"
+            ));
+            for method in [
+                IntegrationMethod::BackwardEuler,
+                IntegrationMethod::Trapezoidal,
+                IntegrationMethod::Bdf2,
+            ] {
+                let mut s = c.simulator();
+                let mut options = TransientOptions::new(6e-6, 0.1e-6);
+                options.method = method;
+                let samples = s.transient(&options).unwrap();
+                assert_eq!(
+                    s.stats.switch_transitions, 4,
+                    "{control} {threshold} {method:?}"
+                );
+                assert!(s.stats.rejected_steps < 10, "{:?}", s.stats);
+                for sample in samples {
+                    if [1e-6, 2e-6, 4e-6, 5e-6]
+                        .iter()
+                        .any(|t| (sample.axis - t).abs() < 1e-12)
+                    {
+                        continue; // Conductance changes at the accepted edge endpoint.
+                    }
+                    let on = (sample.axis > 1e-6 && sample.axis < 2e-6)
+                        || (sample.axis > 4e-6 && sample.axis < 5e-6);
+                    near(
+                        sample.get(&c, "v(out)").unwrap(),
+                        100.0 / (100.0 + if on { 1.0 } else { 1e6 }),
+                        1e-9,
+                    );
+                }
+            }
+        }
+    }
+}
+#[test]
+fn smooth_switch_thresholds_near_output_times_do_not_collapse_steps() {
+    for current in [false, true] {
+        let control = if current {
+            "Ictrl 0 ctrl PWL(0 0 1m 1 2m 0)\nVsense ctrl 0 0\nW1 rail out Vsense gate\n.model gate CSW(RON=2 ROFF=1meg IT=0.5 IH=0.1)"
+        } else {
+            "Vctrl ctrl 0 PWL(0 0 1m 1 2m 0)\nS1 rail out ctrl 0 gate\n.model gate SW(RON=2 ROFF=1meg VT=0.5 VH=0.1)"
+        };
+        let c = circuit(&format!(
+            "Smooth switch\nVrail rail 0 5\nRload out 0 100\nCload out 0 1u\n{control}\n.end"
+        ));
+        let mut sim = c.simulator();
+        sim.options = SolverOptions::precise();
+        let mut options = TransientOptions::new(0.0022, 11e-6);
+        options.max_step = 1e-6;
+        let samples = sim.transient(&options).unwrap();
+        assert_eq!(sim.stats.switch_transitions, 2);
+        let off = 500.0 / 1_000_100.0;
+        let on = 500.0 / 102.0;
+        let tau = 1e-6 / (1.0 / 100.0 + 1.0 / 1e6);
+        let expected = off + (on - off) * (-0.0006_f64 / tau).exp();
+        near(
+            samples.last().unwrap().get(&c, "v(out)").unwrap(),
+            expected,
+            2e-5,
+        );
+    }
+}

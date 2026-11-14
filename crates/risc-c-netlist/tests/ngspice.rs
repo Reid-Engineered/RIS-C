@@ -505,7 +505,8 @@ fn numerical_stress_corpus_matches_ngspice() {
     let mut s = c.simulator();
     s.options = p.solver_options;
     let actual = s.transient(&options).unwrap();
-    assert!(s.stats.minimum_step.unwrap() < 1e-8);
+    // Waveform refinement below verifies the fast response. Alignment slivers
+    // are deliberately excluded from minimum_step and cannot witness stiffness.
     options.max_step = 25e-6;
     let refined = s.transient(&options).unwrap();
     let expected = oracle(

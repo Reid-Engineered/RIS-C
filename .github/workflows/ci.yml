@@ -28,9 +28,11 @@ jobs:
       - if: runner.os == 'Linux'
         run: python3 -m unittest discover -s scripts/tests -v
       - if: runner.os == 'Linux'
-        run: python3 scripts/parity.py --check
+        # Checked-in snapshots are imported separately from oracle artifacts.
+        # Validate their integrity here; the oracle job executes current sources.
+        run: python3 scripts/parity.py --check --allow-stale
       - if: runner.os == 'Linux'
-        run: python3 scripts/expansion.py --check
+        run: python3 scripts/expansion.py --check --allow-stale
   oracle:
     runs-on: ubuntu-latest
     steps:

@@ -107,6 +107,11 @@ class ParityTests(unittest.TestCase):
             (root / 'crates/test.rs').write_text('changed source')
             with self.assertRaisesRegex(ValueError, 'stale'):
                 parity.check_report(root)
+            parity.check_report(root, allow_stale=True)
+            report['metrics']['total']['implemented'] += 1
+            (root / parity.RESULT).write_text(json.dumps(report))
+            with self.assertRaisesRegex(ValueError, 'metrics'):
+                parity.check_report(root, allow_stale=True)
 
 class PlatformEvidenceTests(unittest.TestCase):
     def test_native_evidence_requires_all_platforms_and_current_source(self):

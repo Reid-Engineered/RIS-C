@@ -52,6 +52,19 @@ fn include_cycle_and_case_sensitive_path() {
     )
     .unwrap();
     assert!(parse_file(dir.join("top.cir")).is_ok());
+    for include in [
+        ".include \"Models.INC\" ; comment",
+        ".include 'Models.INC' $ comment",
+        ".inc Models.INC;comment",
+        ".inc Models.INC $ comment",
+    ] {
+        std::fs::write(
+            dir.join("top.cir"),
+            format!("Title\n{include}\nV1 a 0 0.5\nD1 a 0 small\n.op\n.end\n"),
+        )
+        .unwrap();
+        assert!(parse_file(dir.join("top.cir")).is_ok(), "{include}");
+    }
     std::fs::write(dir.join("Models.INC"), ".include top.cir\n").unwrap();
     assert!(
         parse_file(dir.join("top.cir"))
@@ -296,11 +309,9 @@ fn pulse_zero_edges_omitted_arguments_and_validation() {
         _ => panic!(),
     };
     let samples = circuit.simulator().transient(options).unwrap();
-    assert!(
-        samples
-            .iter()
-            .all(|s| (s.get(&circuit, "v(in)").unwrap() - 5.0).abs() < 1e-12)
-    );
+    assert_eq!(samples[0].get(&circuit, "v(in)").unwrap(), 0.0);
+    assert!((samples[1].get(&circuit, "v(in)").unwrap() - 5.0).abs() < 1e-12);
+    assert_eq!(samples.last().unwrap().get(&circuit, "v(in)").unwrap(), 0.0);
 
     let delayed_step =
         parse_str("Three args\nV1 in 0 PULSE(0 5 2n)\nR1 in 0 1k\n.tran 1n 10n\n.end").unwrap();
@@ -310,7 +321,13 @@ fn pulse_zero_edges_omitted_arguments_and_validation() {
         _ => panic!(),
     };
     let samples = circuit.simulator().transient(options).unwrap();
-    for (time, expected) in [(0.0, 0.0), (1e-9, 0.0), (2e-9, 5.0), (10e-9, 5.0)] {
+    for (time, expected) in [
+        (0.0, 0.0),
+        (1e-9, 0.0),
+        (2e-9, 0.0),
+        (3e-9, 5.0),
+        (10e-9, 5.0),
+    ] {
         let sample = samples
             .iter()
             .find(|s| (s.axis - time).abs() < 1e-18)
@@ -325,7 +342,8 @@ fn pulse_zero_edges_omitted_arguments_and_validation() {
     ] {
         let parsed = parse_str(op_deck).unwrap();
         let circuit = parsed.circuit.compile().unwrap();
-        assert!(circuit.simulator().operating_point().is_ok());
+        let op = circuit.simulator().operating_point().unwrap();
+        assert_eq!(op.get(&circuit, "v(in)").unwrap(), 0.0);
     }
 
     for invalid in [
@@ -335,9 +353,35 @@ fn pulse_zero_edges_omitted_arguments_and_validation() {
         "Title\nV1 a 0 PULSE(0 1 0 -1n 1n 2n 5n)\n.end",
         "Title\nV1 a 0 PULSE(0 1 0 1n -1n 2n 5n)\n.end",
         "Title\nV1 a 0 PULSE(0 1 0 1n 1n -2n 5n)\n.end",
-        "Title\nV1 a 0 PULSE(0 1 0 1u 1u 1u 2u)\n.end",
         "Title\nV1 a 0 PULSE(0 1 0 0 0 0 0)\n.end",
     ] {
         assert!(parse_str(invalid).is_err(), "{invalid}");
+    }
+}
+#[test]
+fn bjt_temperature_transients_survive_output_alignment() {
+    for (kind, _, card) in common::legacy::variants()
+        .into_iter()
+        .filter(|(k, p, _)| (k == "NPN" || k == "PNP") && p == "baseline")
+    {
+        for temp in [0, 27, 80] {
+            let p = if kind == "PNP" { -1.0 } else { 1.0 };
+            let deck = format!(
+                "BJT alignment\nVc c 0 {}\nVb b 0 DC {} SIN({} {} 20meg)\nVs sub 0 {}\nQ1 c b 0 sub device\n{card}\n.temp {temp}\n.options reltol=1e-8 vntol=1e-10 abstol=1e-14\n.end",
+                p * 2.0,
+                p * 0.65,
+                p * 0.65,
+                p * 0.001,
+                if kind == "PNP" { -3.0 } else { -0.2 }
+            );
+            let parsed = parse_str(&deck).unwrap();
+            let c = parsed.circuit.compile().unwrap();
+            let mut sim = c.simulator();
+            sim.options = parsed.solver_options;
+            let mut options = risc_c_core::TransientOptions::new(50e-9, 0.5e-9);
+            options.max_step = 0.0125e-9;
+            sim.transient(&options)
+                .unwrap_or_else(|e| panic!("{kind}/{temp}: {e}"));
+        }
     }
 }

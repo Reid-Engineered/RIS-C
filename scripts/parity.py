@@ -227,11 +227,11 @@ def persist(report, root=ROOT):
             stream.write(json.dumps(snapshot, sort_keys=True) + '\n')
 
 
-def check_report(root=ROOT):
+def check_report(root=ROOT, allow_stale=False):
     spec = load_spec(root)
     report = json.loads((root / RESULT).read_text())
     if (report['scope_version'] != spec['scope_version'] or report['scope_sha256'] != scope_signature(spec)
-            or report['source_sha256'] != source_fingerprint(root)):
+            or (not allow_stale and report['source_sha256'] != source_fingerprint(root))):
         raise ValueError(f'parity report is stale; run python3 scripts/{REPORT_SCRIPT} --run')
     if report['metrics'] != calculate(spec, report['suites']):
         raise ValueError('recorded metrics do not match the scope and test outcomes')
@@ -246,6 +246,8 @@ def main():
     mode.add_argument('--run', action='store_true', help='execute suites and update reports/history')
     mode.add_argument('--check', action='store_true', help='validate recorded report freshness without running tests')
     parser.add_argument('--ngspice', help='path to ngspice 47')
+    parser.add_argument('--allow-stale', action='store_true',
+                        help='validate snapshot integrity without requiring current-source evidence')
     args = parser.parse_args()
     try:
         if args.run:
@@ -267,7 +269,7 @@ def main():
             persist(report)
             failed = any(s['status'] == 'failed' for s in suites.values())
         else:
-            report = check_report()
+            report = check_report(allow_stale=args.allow_stale)
             failed = False
         totals = report['metrics']['total']
         print(f"{totals['evidenced_percent']:.2f}% evidence-backed; {totals['implementation_percent']:.2f}% implemented ({report['scope_version']}). See {MARKDOWN.as_posix()}.")

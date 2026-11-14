@@ -204,8 +204,16 @@ fn load_file(path: &Path, title: bool, stack: &mut Vec<PathBuf>) -> PResult<Vec<
                 .trim()
                 .split_once(char::is_whitespace)
                 .map(|(_, s)| s.trim())
-                .unwrap_or("")
-                .trim_matches(['\'', '"']);
+                .unwrap_or("");
+            let path_text =
+                if let Some(quote) = path_text.chars().next().filter(|c| matches!(c, '\'' | '"')) {
+                    path_text[1..].split(quote).next().unwrap_or("")
+                } else {
+                    path_text
+                        .split(|c: char| c.is_whitespace() || matches!(c, ';' | '$'))
+                        .next()
+                        .unwrap_or("")
+                };
             expanded.extend(load_file(
                 &path.parent().unwrap_or(Path::new(".")).join(path_text),
                 false,
@@ -540,23 +548,18 @@ fn elaborate(lines: Vec<Line>) -> PResult<ParsedNetlist> {
             _ => {}
         }
     }
-    let tran_stop = analyses
-        .iter()
-        .filter_map(|a| match a {
-            Analysis::Transient { options, .. }
-                if options.stop.is_finite() && options.stop > 0.0 =>
-            {
-                Some(options.stop)
-            }
-            _ => None,
-        })
-        .reduce(f64::max);
+    let tran_defaults = analyses.iter().find_map(|a| match a {
+        Analysis::Transient { options, .. } if options.stop.is_finite() && options.stop > 0.0 => {
+            Some((options.output_step, options.stop))
+        }
+        _ => None,
+    });
     let mut context = Context {
         builder: &mut builder,
         subs: &subs,
         source_map: &mut source_map,
         device_count: 0,
-        tran_stop,
+        tran_defaults,
     };
     context.expand(
         &root,
@@ -578,7 +581,7 @@ struct Context<'a> {
     subs: &'a HashMap<String, Subcircuit>,
     source_map: &'a mut BTreeMap<String, SourceSpan>,
     device_count: usize,
-    tran_stop: Option<f64>,
+    tran_defaults: Option<(f64, f64)>,
 }
 impl Context<'_> {
     fn expand(
@@ -771,7 +774,7 @@ impl Context<'_> {
                     if t.len() < 4 {
                         return Err(line.error("source needs two nodes and a specification"));
                     }
-                    let s = source(line, &t[3..], env, self.tran_stop)?;
+                    let s = source(line, &t[3..], env, self.tran_defaults)?;
                     if name.starts_with('v') {
                         Element::Voltage(s)
                     } else {
@@ -918,7 +921,7 @@ fn source(
     line: &Line,
     t: &[String],
     env: &HashMap<String, f64>,
-    tran_stop: Option<f64>,
+    tran_defaults: Option<(f64, f64)>,
 ) -> PResult<Source> {
     let mut s = Source::dc(0.0);
     let mut k = 0;
@@ -974,15 +977,11 @@ fn source(
                             ));
                         }
                         let delay = *args.get(2).unwrap_or(&0.0);
-                        let rise = *args.get(3).unwrap_or(&0.0);
-                        let fall = *args.get(4).unwrap_or(&0.0);
-                        let width = *args
-                            .get(5)
-                            .unwrap_or(&tran_stop.map_or(1.0, |stop| stop * 2.0));
-                        let period = *args.get(6).unwrap_or(&tran_stop.map_or_else(
-                            || (rise + width + fall).max(1.0),
-                            |stop| stop + rise + width + fall,
-                        ));
+                        let (step, stop) = tran_defaults.unwrap_or((1.0, 1.0));
+                        let rise = *args.get(3).unwrap_or(&step);
+                        let fall = *args.get(4).unwrap_or(&step);
+                        let width = *args.get(5).unwrap_or(&stop);
+                        let period = *args.get(6).unwrap_or(&stop);
                         Waveform::Pulse {
                             low: args[0],
                             high: args[1],

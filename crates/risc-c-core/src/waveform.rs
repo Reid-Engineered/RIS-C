@@ -43,7 +43,6 @@ impl Waveform {
                     && *fall >= 0.0
                     && *width >= 0.0
                     && *period > 0.0
-                    && *period >= rise + width + fall
             }
             Self::Sin {
                 offset,
@@ -71,7 +70,7 @@ impl Waveform {
             Ok(())
         } else {
             Err(Error::Circuit(
-                "invalid waveform (pulse durations must be nonnegative with positive period >= rise+width+fall; PWL times strictly increase)"
+                "invalid waveform (pulse durations must be nonnegative with positive period; PWL times strictly increase)"
                     .into(),
             ))
         }
@@ -149,6 +148,7 @@ impl Waveform {
                 let cycle = ((t - delay) / period).floor().max(0.0);
                 [0.0, *rise, rise + width, rise + width + fall, *period]
                     .into_iter()
+                    .filter(|u| *u <= *period)
                     .flat_map(|u| {
                         [
                             delay + cycle * period + u,
@@ -327,6 +327,7 @@ mod tests {
             width: 1e-6,
             period: 2.5e-6,
         };
-        assert!(short_period.validate().is_err());
+        assert!(short_period.validate().is_ok());
+        assert_eq!(short_period.value(2.5e-6), 0.0);
     }
 }
