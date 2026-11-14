@@ -39,9 +39,10 @@ impl Waveform {
                     .iter()
                     .all(|v| v.is_finite())
                     && *delay >= 0.0
-                    && *rise > 0.0
-                    && *fall > 0.0
+                    && *rise >= 0.0
+                    && *fall >= 0.0
                     && *width >= 0.0
+                    && *period > 0.0
                     && *period >= rise + width + fall
             }
             Self::Sin {
@@ -69,7 +70,10 @@ impl Waveform {
         if ok {
             Ok(())
         } else {
-            Err(Error::Circuit("invalid waveform (pulse edges must have positive duration; PWL times strictly increase)".into()))
+            Err(Error::Circuit(
+                "invalid waveform (pulse durations must be nonnegative with positive period >= rise+width+fall; PWL times strictly increase)"
+                    .into(),
+            ))
         }
     }
     pub fn value(&self, t: f64) -> f64 {
@@ -87,13 +91,17 @@ impl Waveform {
                 if t < *delay {
                     return *low;
                 }
-                let u = (t - delay).rem_euclid(*period);
-                if u < *rise {
+                let eps = 16.0 * f64::EPSILON * t.abs().max(1e-30);
+                let mut u = (t - delay).rem_euclid(*period);
+                if u >= *period - eps {
+                    u = 0.0;
+                }
+                if u + eps < *rise {
                     low + (high - low) * u / rise
-                } else if u < rise + width {
+                } else if u + eps < rise + width {
                     *high
-                } else if u < rise + width + fall {
-                    high + (low - high) * (u - rise - width) / fall
+                } else if u + eps < rise + width + fall {
+                    high + (low - high) * (u - rise - width).max(0.0) / fall
                 } else {
                     *low
                 }
@@ -189,5 +197,136 @@ impl Source {
 impl From<f64> for Source {
     fn from(v: f64) -> Self {
         Self::dc(v)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn zero_edge_pulse_validation_and_evaluation() {
+        let square = Waveform::Pulse {
+            low: 0.0,
+            high: 5.0,
+            delay: 1e-6,
+            rise: 0.0,
+            fall: 0.0,
+            width: 2e-6,
+            period: 5e-6,
+        };
+        assert!(square.validate().is_ok());
+        assert_eq!(square.value(0.0), 0.0);
+        assert_eq!(square.value(0.999e-6), 0.0);
+        assert_eq!(square.value(1e-6), 5.0);
+        assert_eq!(square.value(2.5e-6), 5.0);
+        assert_eq!(square.value(3e-6), 0.0);
+        assert_eq!(square.value(5.999e-6), 0.0);
+        assert_eq!(square.value(6e-6), 5.0);
+        assert_eq!(square.value(8e-6), 0.0);
+
+        assert_eq!(square.next_breakpoint(0.0), Some(1e-6));
+        assert_eq!(square.next_breakpoint(1e-6), Some(3e-6));
+        assert_eq!(square.next_breakpoint(3e-6), Some(6e-6));
+        assert_eq!(square.next_breakpoint(6e-6), Some(8e-6));
+    }
+
+    #[test]
+    fn asymmetric_zero_edge_and_zero_width_pulses() {
+        let zero_rise = Waveform::Pulse {
+            low: -1.0,
+            high: 1.0,
+            delay: 0.0,
+            rise: 0.0,
+            fall: 2.0,
+            width: 0.0,
+            period: 4.0,
+        };
+        assert!(zero_rise.validate().is_ok());
+        assert_eq!(zero_rise.value(0.0), 1.0);
+        assert!((zero_rise.value(1.0) - 0.0).abs() < 1e-12);
+        assert_eq!(zero_rise.value(2.0), -1.0);
+        assert_eq!(zero_rise.value(3.5), -1.0);
+        assert_eq!(zero_rise.next_breakpoint(0.0), Some(2.0));
+        assert_eq!(zero_rise.next_breakpoint(2.0), Some(4.0));
+
+        let zero_fall = Waveform::Pulse {
+            low: 0.0,
+            high: 3.0,
+            delay: 0.0,
+            rise: 2.0,
+            fall: 0.0,
+            width: 1.0,
+            period: 4.0,
+        };
+        assert!(zero_fall.validate().is_ok());
+        assert_eq!(zero_fall.value(0.0), 0.0);
+        assert!((zero_fall.value(1.0) - 1.5).abs() < 1e-12);
+        assert_eq!(zero_fall.value(2.0), 3.0);
+        assert_eq!(zero_fall.value(3.0), 0.0);
+        assert_eq!(zero_fall.next_breakpoint(0.0), Some(2.0));
+        assert_eq!(zero_fall.next_breakpoint(2.0), Some(3.0));
+        assert_eq!(zero_fall.next_breakpoint(3.0), Some(4.0));
+
+        let flat_zero = Waveform::Pulse {
+            low: 1.5,
+            high: 5.0,
+            delay: 0.0,
+            rise: 0.0,
+            fall: 0.0,
+            width: 0.0,
+            period: 2.0,
+        };
+        assert!(flat_zero.validate().is_ok());
+        assert_eq!(flat_zero.value(0.0), 1.5);
+        assert_eq!(flat_zero.value(1.0), 1.5);
+        assert_eq!(flat_zero.next_breakpoint(0.0), Some(2.0));
+    }
+
+    #[test]
+    fn pulse_validation_rejects_invalid_durations() {
+        let zero_period = Waveform::Pulse {
+            low: 0.0,
+            high: 1.0,
+            delay: 0.0,
+            rise: 0.0,
+            fall: 0.0,
+            width: 0.0,
+            period: 0.0,
+        };
+        assert!(zero_period.validate().is_err());
+
+        let negative_rise = Waveform::Pulse {
+            low: 0.0,
+            high: 1.0,
+            delay: 0.0,
+            rise: -1e-9,
+            fall: 0.0,
+            width: 1e-6,
+            period: 2e-6,
+        };
+        assert!(negative_rise.validate().is_err());
+
+        let negative_fall = Waveform::Pulse {
+            low: 0.0,
+            high: 1.0,
+            delay: 0.0,
+            rise: 0.0,
+            fall: -1e-9,
+            width: 1e-6,
+            period: 2e-6,
+        };
+        assert!(negative_fall.validate().is_err());
+
+        let short_period = Waveform::Pulse {
+            low: 0.0,
+            high: 1.0,
+            delay: 0.0,
+            rise: 1e-6,
+            fall: 1e-6,
+            width: 1e-6,
+            period: 2.5e-6,
+        };
+        assert!(short_period.validate().is_err());
     }
 }

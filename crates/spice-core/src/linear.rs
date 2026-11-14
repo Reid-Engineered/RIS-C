@@ -11,6 +11,7 @@ pub(crate) struct Pattern {
     pub lu: SymbolicLu<usize>,
     pub coords: Vec<(usize, usize)>,
     slots: HashMap<(usize, usize), usize>,
+    row_slots: Vec<Vec<usize>>,
 }
 impl Pattern {
     pub fn new(n: usize, entries: &BTreeSet<(usize, usize)>) -> Result<Self> {
@@ -31,16 +32,24 @@ impl Pattern {
             .enumerate()
             .map(|(k, rc)| (rc, k))
             .collect();
+        let mut row_slots = vec![Vec::new(); n];
+        for (k, &(r, _)) in coords.iter().enumerate() {
+            row_slots[r].push(k);
+        }
         Ok(Self {
             n,
             symbolic,
             lu,
             coords,
             slots,
+            row_slots,
         })
     }
     pub fn slot(&self, r: usize, c: usize) -> usize {
         self.slots[&(r, c)]
+    }
+    pub fn row_slots(&self, r: usize) -> &[usize] {
+        &self.row_slots[r]
     }
     pub fn zeros(&self) -> Vec<f64> {
         vec![0.0; self.coords.len()]

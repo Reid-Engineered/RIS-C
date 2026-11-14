@@ -214,3 +214,130 @@ fn bistable_latch_and_scaled_pivots() {
         assert!((point.get(&c, "v(b)").unwrap() + 1e-15).abs() < 1e-25);
     }
 }
+
+#[test]
+fn pulse_zero_edges_omitted_arguments_and_validation() {
+    let square = parse_str(
+        "Zero-edge pulse\nV1 in 0 PULSE(0 1 0 0 0 1u 2u)\nR1 in 0 1k\n.tran 0.5u 4u\n.end",
+    )
+    .unwrap();
+    let circuit = square.circuit.compile().unwrap();
+    let options = match &square.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let samples = circuit.simulator().transient(options).unwrap();
+    for (time, expected) in [
+        (0.0, 1.0),
+        (0.5e-6, 1.0),
+        (1.0e-6, 0.0),
+        (1.5e-6, 0.0),
+        (2.0e-6, 1.0),
+        (2.5e-6, 1.0),
+        (3.0e-6, 0.0),
+        (3.5e-6, 0.0),
+    ] {
+        let sample = samples
+            .iter()
+            .find(|s| (s.axis - time).abs() < 1e-12)
+            .unwrap_or_else(|| panic!("missing sample at {time}"));
+        assert!(
+            (sample.get(&circuit, "v(in)").unwrap() - expected).abs() < 1e-12,
+            "at t={time}: got {}, expected {expected}",
+            sample.get(&circuit, "v(in)").unwrap()
+        );
+    }
+
+    let single_pulse =
+        parse_str("Single pulse\nV1 in 0 PULSE(0 5 1n 1n 1n 10n)\nR1 in 0 1k\n.tran 1n 100n\n.end")
+            .unwrap();
+    let circuit = single_pulse.circuit.compile().unwrap();
+    let options = match &single_pulse.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let samples = circuit.simulator().transient(options).unwrap();
+    for (time, expected) in [
+        (0.0, 0.0),
+        (1e-9, 0.0),
+        (2e-9, 5.0),
+        (12e-9, 5.0),
+        (13e-9, 0.0),
+        (50e-9, 0.0),
+        (100e-9, 0.0),
+    ] {
+        let sample = samples
+            .iter()
+            .find(|s| (s.axis - time).abs() < 1e-18)
+            .unwrap_or_else(|| panic!("missing sample at {time}"));
+        assert!(
+            (sample.get(&circuit, "v(in)").unwrap() - expected).abs() < 1e-12,
+            "at t={time}: got {}, expected {expected}",
+            sample.get(&circuit, "v(in)").unwrap()
+        );
+    }
+
+    let short_tran =
+        parse_str("Short tran\nV1 in 0 PULSE(0 5 1n 1n 1n 10n)\nR1 in 0 1k\n.tran 1n 5n\n.end")
+            .unwrap();
+    let circuit = short_tran.circuit.compile().unwrap();
+    let options = match &short_tran.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let samples = circuit.simulator().transient(options).unwrap();
+    assert!((samples.last().unwrap().get(&circuit, "v(in)").unwrap() - 5.0).abs() < 1e-12);
+
+    let step_two_args =
+        parse_str("Two args\nV1 in 0 PULSE(0 5)\nR1 in 0 1k\n.tran 1n 10n\n.end").unwrap();
+    let circuit = step_two_args.circuit.compile().unwrap();
+    let options = match &step_two_args.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let samples = circuit.simulator().transient(options).unwrap();
+    assert!(
+        samples
+            .iter()
+            .all(|s| (s.get(&circuit, "v(in)").unwrap() - 5.0).abs() < 1e-12)
+    );
+
+    let delayed_step =
+        parse_str("Three args\nV1 in 0 PULSE(0 5 2n)\nR1 in 0 1k\n.tran 1n 10n\n.end").unwrap();
+    let circuit = delayed_step.circuit.compile().unwrap();
+    let options = match &delayed_step.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let samples = circuit.simulator().transient(options).unwrap();
+    for (time, expected) in [(0.0, 0.0), (1e-9, 0.0), (2e-9, 5.0), (10e-9, 5.0)] {
+        let sample = samples
+            .iter()
+            .find(|s| (s.axis - time).abs() < 1e-18)
+            .unwrap();
+        assert!((sample.get(&circuit, "v(in)").unwrap() - expected).abs() < 1e-12);
+    }
+
+    for op_deck in [
+        "Op two args\nV1 in 0 PULSE(0 5)\nR1 in 0 1k\n.op\n.end",
+        "Op three args\nV1 in 0 PULSE(0 5 1n)\nR1 in 0 1k\n.op\n.end",
+        "Op six args\nV1 in 0 PULSE(0 5 1n 1n 1n 10n)\nR1 in 0 1k\n.op\n.end",
+    ] {
+        let parsed = parse_str(op_deck).unwrap();
+        let circuit = parsed.circuit.compile().unwrap();
+        assert!(circuit.simulator().operating_point().is_ok());
+    }
+
+    for invalid in [
+        "Title\nV1 a 0 PULSE(0)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 0 1n 1n 2n 5n 99)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 -1n 1n 1n 2n 5n)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 0 -1n 1n 2n 5n)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 0 1n -1n 2n 5n)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 0 1n 1n -2n 5n)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 0 1u 1u 1u 2u)\n.end",
+        "Title\nV1 a 0 PULSE(0 1 0 0 0 0 0)\n.end",
+    ] {
+        assert!(parse_str(invalid).is_err(), "{invalid}");
+    }
+}

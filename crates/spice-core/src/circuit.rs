@@ -192,6 +192,8 @@ pub(crate) struct CompiledData {
     pub initial: Vec<f64>,
     pub ic: HashMap<usize, f64>,
     pub mutual: Vec<(usize, usize, f64)>,
+    pub has_switches: bool,
+    pub has_nonlinear: bool,
 }
 #[derive(Clone, Debug)]
 pub struct CompiledCircuit(pub(crate) Arc<CompiledData>);
@@ -319,6 +321,15 @@ impl Circuit {
             .filter(|(n, _)| n.0 != 0)
             .map(|(n, v)| (n.0 - 1, *v))
             .collect();
+        let has_switches = out.iter().any(|d| {
+            matches!(
+                d.element,
+                Element::VoltageSwitch { .. } | Element::CurrentSwitch { .. }
+            )
+        });
+        let has_nonlinear = out
+            .iter()
+            .any(|d| matches!(d.element, Element::Semiconductor { .. }));
         Ok(CompiledCircuit(Arc::new(CompiledData {
             pattern,
             devices: out,
@@ -328,6 +339,8 @@ impl Circuit {
             initial,
             ic,
             mutual,
+            has_switches,
+            has_nonlinear,
         })))
     }
 }
@@ -415,17 +428,7 @@ impl CompiledData {
         source_scale: f64,
         override_source: Option<(&str, f64)>,
     ) -> Result<Evaluation> {
-        self.evaluate_storage(x, time, source_scale, override_source, None)
-    }
-    pub fn evaluate_storage(
-        &self,
-        x: &[f64],
-        time: Option<f64>,
-        source_scale: f64,
-        override_source: Option<(&str, f64)>,
-        previous: Option<DeviceHistory<'_>>,
-    ) -> Result<Evaluation> {
-        self.evaluate_context(x, time, source_scale, override_source, previous, None)
+        self.evaluate_context(x, time, source_scale, override_source, None, None)
     }
     pub fn evaluate_context(
         &self,

@@ -39,6 +39,7 @@ fn solve(graph: &Graph, seed: &[f64], ground: usize) -> Result<(Vec<usize>, Vec<
 pub(crate) fn constraints(
     data: &CompiledData,
     uic: bool,
+    time: Option<f64>,
 ) -> Result<(Vec<f64>, HashMap<usize, f64>)> {
     let ground = data.nvolt;
     let mut x = data.initial.clone();
@@ -52,7 +53,7 @@ pub(crate) fn constraints(
                     &mut original,
                     d.nodes[0].unwrap_or(ground),
                     d.nodes[1].unwrap_or(ground),
-                    s.dc,
+                    s.at(time),
                 ),
                 Element::Inductor { .. } => edge(
                     &mut original,

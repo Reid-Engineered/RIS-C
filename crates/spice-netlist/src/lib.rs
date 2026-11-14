@@ -540,11 +540,23 @@ fn elaborate(lines: Vec<Line>) -> PResult<ParsedNetlist> {
             _ => {}
         }
     }
+    let tran_stop = analyses
+        .iter()
+        .filter_map(|a| match a {
+            Analysis::Transient { options, .. }
+                if options.stop.is_finite() && options.stop > 0.0 =>
+            {
+                Some(options.stop)
+            }
+            _ => None,
+        })
+        .reduce(f64::max);
     let mut context = Context {
         builder: &mut builder,
         subs: &subs,
         source_map: &mut source_map,
         device_count: 0,
+        tran_stop,
     };
     context.expand(
         &root,
@@ -566,6 +578,7 @@ struct Context<'a> {
     subs: &'a HashMap<String, Subcircuit>,
     source_map: &'a mut BTreeMap<String, SourceSpan>,
     device_count: usize,
+    tran_stop: Option<f64>,
 }
 impl Context<'_> {
     fn expand(
@@ -758,7 +771,7 @@ impl Context<'_> {
                     if t.len() < 4 {
                         return Err(line.error("source needs two nodes and a specification"));
                     }
-                    let s = source(line, &t[3..], env)?;
+                    let s = source(line, &t[3..], env, self.tran_stop)?;
                     if name.starts_with('v') {
                         Element::Voltage(s)
                     } else {
@@ -901,7 +914,12 @@ impl Context<'_> {
         Ok(())
     }
 }
-fn source(line: &Line, t: &[String], env: &HashMap<String, f64>) -> PResult<Source> {
+fn source(
+    line: &Line,
+    t: &[String],
+    env: &HashMap<String, f64>,
+    tran_stop: Option<f64>,
+) -> PResult<Source> {
     let mut s = Source::dc(0.0);
     let mut k = 0;
     let mut dc = false;
@@ -950,19 +968,29 @@ fn source(line: &Line, t: &[String], env: &HashMap<String, f64>) -> PResult<Sour
                 k += 1;
                 s.waveform = Some(match kind {
                     "pulse" => {
-                        if args.len() != 7 {
-                            return Err(
-                                line.error("PULSE requires low high delay rise fall width period")
-                            );
+                        if !(2..=7).contains(&args.len()) {
+                            return Err(line.error(
+                                "PULSE requires low high [delay [rise [fall [width [period]]]]]",
+                            ));
                         }
+                        let delay = *args.get(2).unwrap_or(&0.0);
+                        let rise = *args.get(3).unwrap_or(&0.0);
+                        let fall = *args.get(4).unwrap_or(&0.0);
+                        let width = *args
+                            .get(5)
+                            .unwrap_or(&tran_stop.map_or(1.0, |stop| stop * 2.0));
+                        let period = *args.get(6).unwrap_or(&tran_stop.map_or_else(
+                            || (rise + width + fall).max(1.0),
+                            |stop| stop + rise + width + fall,
+                        ));
                         Waveform::Pulse {
                             low: args[0],
                             high: args[1],
-                            delay: args[2],
-                            rise: args[3],
-                            fall: args[4],
-                            width: args[5],
-                            period: args[6],
+                            delay,
+                            rise,
+                            fall,
+                            width,
+                            period,
                         }
                     }
                     "sin" => {
