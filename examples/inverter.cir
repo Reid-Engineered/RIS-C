@@ -1,0 +1,11 @@
+CMOS inverter (overlap/junction capacitances)
+Vdd vdd 0 5
+Vin in 0 PULSE(0 5 100n 10n 10n 400n 1u)
+Mp out in vdd vdd P L=1u W=20u
+Mn out in 0 0 N L=1u W=10u
+Cload out 0 10p
+.model N NMOS (LEVEL=1 VTO=1 KP=100u LAMBDA=0.02 CGSO=100p CGDO=100p)
+.model P PMOS (LEVEL=1 VTO=-1 KP=50u LAMBDA=0.02 CGSO=100p CGDO=100p)
+.op
+.tran 2n 2u
+.end

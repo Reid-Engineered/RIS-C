@@ -1,0 +1,15 @@
+[package]
+name = "risc-c-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "spice"
+path = "src/main.rs"
+
+[dependencies]
+risc-c-core = { path = "../risc-c-core" }
+risc-c-netlist = { path = "../risc-c-netlist" }
+

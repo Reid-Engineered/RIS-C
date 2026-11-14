@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "scope_version": "coupling-switches-v1.0",
+  "scope_sha256": "2b4def536b09ff943e492c7cd295cdade0f0c03e989bd4a3ff6b69cff95cad97",
+  "generated_at": "2026-11-14T00:51:05+00:00",
+  "source_sha256": "7e9db3d335ed33dfe106969fc1fb42e01fc2743817c2857f5f1aaa03f8434a1b",
+  "platform": "linux",
+  "suites": {
+    "core": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "device::tests::peroxide_jacobians_and_charge_conservation": "passed",
+        "linear::tests::peroxide_dense_oracle_and_complex": "passed",
+        "simulator::excess_phase_history_tests::excess_phase_history_survives_discarded_and_failed_trials": "passed",
+        "simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors": "passed",
+        "simulator::reliability_tests::gmin_recovers_after_direct_newton_failure": "passed",
+        "simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories": "passed",
+        "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed",
+        "simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry": "passed"
+      },
+      "log": "reports/logs/expansion/core.log",
+      "log_sha256": "75fb90e105b2c1e6c466efb8e9be5801d4f8b308eac3a324c779397e86c860c8"
+    },
+    "expansion": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "buck_refinement_and_power_balance": "passed",
+        "coupled_transient_energy_balance": "passed",
+        "coupling_validation_and_hierarchy": "passed",
+        "switch_dc_hysteresis_ac_and_current_polarity": "passed",
+        "switch_event_timing_and_initial_hints": "passed",
+        "switch_models_and_controls_are_instance_scoped": "passed",
+        "transformer_ac_transfer_and_polarity": "passed"
+      },
+      "log": "reports/logs/expansion/expansion.log",
+      "log_sha256": "13ee0dc0343e6167db04bddaad9af0e2eb41deca41fa47ecd55348aa25fd4c5e"
+    },
+    "oracle": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "expansion_buck_matches_reference": "passed",
+        "expansion_switches_match_reference": "passed",
+        "expansion_transformer_matches_reference": "passed"
+      },
+      "log": "reports/logs/expansion/oracle.log",
+      "log_sha256": "6536b795c0a2070c457a302def520c917f1b5a9c1ca3cc770595cc076015960f",
+      "reference_version": "ngspice-47",
+      "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
+    },
+    "scale": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "ladder_10000": "passed"
+      },
+      "log": "reports/logs/expansion/scale.log",
+      "log_sha256": "ad476af7ab84db9e2c295378c00884b434d457d768c4210d174599235cb7e040"
+    },
+    "platform": {
+      "status": "passed",
+      "tests": {
+        "Linux": "passed",
+        "Darwin": "passed",
+        "Windows": "passed"
+      },
+      "evidence": "reports/platform-evidence.json"
+    }
+  },
+  "metrics": {
+    "total": {
+      "total": 8,
+      "implemented": 8,
+      "evidenced": 8,
+      "implementation_percent": 100.0,
+      "evidenced_percent": 100.0
+    },
+    "categories": {
+      "Coupled inductors": {
+        "total": 3,
+        "implemented": 3,
+        "evidenced": 3,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Controlled switches": {
+        "total": 4,
+        "implemented": 4,
+        "evidenced": 4,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Converter validation": {
+        "total": 1,
+        "implemented": 1,
+        "evidenced": 1,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      }
+    },
+    "criteria": [
+      {
+        "id": "X01",
+        "category": "Coupled inductors",
+        "title": "K syntax, hierarchical references and physical coupling validation",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+        "checks": [
+          "expansion/coupling_validation_and_hierarchy"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X02",
+        "category": "Coupled inductors",
+        "title": "Loaded transformer AC transfer, ideal coupling and dot polarity",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "expansion/transformer_ac_transfer_and_polarity",
+          "oracle/expansion_transformer_matches_reference"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X03",
+        "category": "Coupled inductors",
+        "title": "Coupled flux histories and passive magnetic energy balance for BE/trap/BDF2",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+        "checks": [
+          "expansion/coupled_transient_energy_balance"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X04",
+        "category": "Controlled switches",
+        "title": "SW/CSW DC hysteresis, controlling-current polarity and frozen-bias AC",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+        "checks": [
+          "expansion/switch_dc_hysteresis_ac_and_current_polarity",
+          "expansion/switch_models_and_controls_are_instance_scoped"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X05",
+        "category": "Controlled switches",
+        "title": "ON/OFF initialization, threshold localization and transient restart",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+        "checks": [
+          "expansion/switch_event_timing_and_initial_hints"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X06",
+        "category": "Controlled switches",
+        "title": "Rejected and failed trials preserve accepted hysteresis and retry results",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/simulator.rs",
+        "checks": [
+          "core/simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X07",
+        "category": "Controlled switches",
+        "title": "Voltage/current-controlled switched-load DC/transient reference comparisons",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/expansion_switches_match_reference"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "X08",
+        "category": "Converter validation",
+        "title": "Buck converter refinement, power balance and ngspice waveform agreement",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "expansion/buck_refinement_and_power_balance",
+          "oracle/expansion_buck_matches_reference"
+        ],
+        "state": "evidenced"
+      }
+    ],
+    "oracle": {
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "discovered": 3,
+      "pass_percent": 100.0
+    }
+  }
+}

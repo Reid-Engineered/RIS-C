@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "scope_version": "coupling-switches-v1.0",
+  "reference": "ngspice 47",
+  "description": "Coupled linear inductors and classic nonnegative-hysteresis voltage/current controlled switches; separate from core-v1.0.",
+  "excluded": [
+    "negative hysteresis",
+    "nonlinear magnetic cores",
+    "transmission lines",
+    "production qualification"
+  ],
+  "changelog": [
+    {
+      "version": "coupling-switches-v1.0",
+      "change": "Initial eight-criterion expansion boundary."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "X01",
+      "category": "Coupled inductors",
+      "title": "K syntax, hierarchical references and physical coupling validation",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+      "checks": [
+        "expansion/coupling_validation_and_hierarchy"
+      ]
+    },
+    {
+      "id": "X02",
+      "category": "Coupled inductors",
+      "title": "Loaded transformer AC transfer, ideal coupling and dot polarity",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+      "checks": [
+        "expansion/transformer_ac_transfer_and_polarity",
+        "oracle/expansion_transformer_matches_reference"
+      ]
+    },
+    {
+      "id": "X03",
+      "category": "Coupled inductors",
+      "title": "Coupled flux histories and passive magnetic energy balance for BE/trap/BDF2",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+      "checks": [
+        "expansion/coupled_transient_energy_balance"
+      ]
+    },
+    {
+      "id": "X04",
+      "category": "Controlled switches",
+      "title": "SW/CSW DC hysteresis, controlling-current polarity and frozen-bias AC",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+      "checks": [
+        "expansion/switch_dc_hysteresis_ac_and_current_polarity",
+        "expansion/switch_models_and_controls_are_instance_scoped"
+      ]
+    },
+    {
+      "id": "X05",
+      "category": "Controlled switches",
+      "title": "ON/OFF initialization, threshold localization and transient restart",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
+      "checks": [
+        "expansion/switch_event_timing_and_initial_hints"
+      ]
+    },
+    {
+      "id": "X06",
+      "category": "Controlled switches",
+      "title": "Rejected and failed trials preserve accepted hysteresis and retry results",
+      "implemented": true,
+      "evidence": "crates/risc-c-core/src/simulator.rs",
+      "checks": [
+        "core/simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry"
+      ]
+    },
+    {
+      "id": "X07",
+      "category": "Controlled switches",
+      "title": "Voltage/current-controlled switched-load DC/transient reference comparisons",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+      "checks": [
+        "oracle/expansion_switches_match_reference"
+      ]
+    },
+    {
+      "id": "X08",
+      "category": "Converter validation",
+      "title": "Buck converter refinement, power balance and ngspice waveform agreement",
+      "implemented": true,
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+      "checks": [
+        "expansion/buck_refinement_and_power_balance",
+        "oracle/expansion_buck_matches_reference"
+      ]
+    }
+  ]
+}

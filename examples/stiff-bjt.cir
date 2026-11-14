@@ -1,0 +1,12 @@
+Fast collector storage coupled to slow emitter bypass
+Vcc rail 0 5
+Vin base 0 DC 0.7 PULSE(0.7 0.71 1u 10n 10n 25m 60m)
+Rc rail collector 1k
+Re emitter 0 1k
+Ce emitter 0 100u
+Cc collector 0 1p
+Q1 collector base emitter q
+.model q NPN(IS=1e-14 BF=150 VAF=100 TF=1n CJE=3p CJC=2p)
+.options method=gear maxord=2 reltol=1e-8 vntol=1e-10 abstol=1e-14
+.tran 100u 50m 0 100u
+.end

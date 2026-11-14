@@ -1,0 +1,768 @@
+{
+  "schema_version": 1,
+  "scope_version": "core-v1.0",
+  "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
+  "generated_at": "2026-11-14T00:50:42+00:00",
+  "source_sha256": "2bd23cc4ad13a6507103fa1d3c31676c8e39256538f6c89a1401f07d4865dfee",
+  "platform": "linux",
+  "suites": {
+    "core": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "device::tests::peroxide_jacobians_and_charge_conservation": "passed",
+        "linear::tests::peroxide_dense_oracle_and_complex": "passed",
+        "simulator::excess_phase_history_tests::excess_phase_history_survives_discarded_and_failed_trials": "passed",
+        "simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors": "passed",
+        "simulator::reliability_tests::gmin_recovers_after_direct_newton_failure": "passed",
+        "simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories": "passed",
+        "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed",
+        "simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry": "passed"
+      },
+      "log": "reports/logs/core.log",
+      "log_sha256": "1397a3b650d4fd086ce0f3a96c56af98e21efaf59fe079cb62de26eafb65fbb0"
+    },
+    "analytical": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "ac_rc_cutoff": "passed",
+        "ac_restores_nominal_nonlinear_bias_after_sweep": "passed",
+        "concurrent_instances_and_cancellation": "passed",
+        "conflicting_initial_conditions": "passed",
+        "current_controlled_and_transconductance_sources": "passed",
+        "dependent_sources": "passed",
+        "diode_bias": "passed",
+        "divider_and_source_current": "passed",
+        "floating_capacitor_ic_respects_existing_hint": "passed",
+        "octave_grid_matches_rc_transfer_function": "passed",
+        "rc_transient_all_methods": "passed",
+        "rl_and_rlc_transient": "passed",
+        "singular_is_error": "passed",
+        "tolerances_and_limits_are_checked": "passed"
+      },
+      "log": "reports/logs/analytical.log",
+      "log_sha256": "6d346aed63417b3cbd786945c4e973db0f356bb6488086a267ed3d08f3a3508f"
+    },
+    "expressions": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "expression::tests::cycles": "passed",
+        "expression::tests::expressions": "passed"
+      },
+      "log": "reports/logs/expressions.log",
+      "log_sha256": "56f9576595105d33fa11c41d3d43da73e08ef8f12fc65cc5a88dbefaefd34ff2"
+    },
+    "parser": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "bare_off_and_braced_device_initial_conditions": "passed",
+        "bistable_latch_and_scaled_pivots": "passed",
+        "deep_expressions_are_bounded": "passed",
+        "every_classic_electrical_parameter_is_accepted": "passed",
+        "example_netlists_compile": "passed",
+        "hierarchy_and_scoping": "passed",
+        "include_cycle_and_case_sensitive_path": "passed",
+        "initial_conditions": "passed",
+        "instance_temperature_and_initial_voltage_networks": "passed",
+        "malformed_inputs_return_errors": "passed",
+        "model_cards_and_continuations": "passed",
+        "rejects_unsupported_fields": "passed",
+        "stiff_diode_transient_converges_under_refinement": "passed"
+      },
+      "log": "reports/logs/parser.log",
+      "log_sha256": "582e9ae3ab756e9b724113cf8b7de09340f78ed950d01668c9378fa9df78c777"
+    },
+    "expansion": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "buck_refinement_and_power_balance": "passed",
+        "coupled_transient_energy_balance": "passed",
+        "coupling_validation_and_hierarchy": "passed",
+        "switch_dc_hysteresis_ac_and_current_polarity": "passed",
+        "switch_event_timing_and_initial_hints": "passed",
+        "switch_models_and_controls_are_instance_scoped": "passed",
+        "transformer_ac_transfer_and_polarity": "passed"
+      },
+      "log": "reports/logs/expansion.log",
+      "log_sha256": "1bc673af16fa33bd3f2b7105d5f2eb0ecad2bdff3faeff64f977248f312c378d"
+    },
+    "cli": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "simulation_failure_does_not_publish_results": "passed",
+        "stdout_csv_and_failure_exit": "passed"
+      },
+      "log": "reports/logs/cli.log",
+      "log_sha256": "4175948c090198d46e825597cda97118101c933a6a043d4bfa8029a084e58100"
+    },
+    "oracle": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "bjt_excess_phase_matches_reference": "passed",
+        "classic_parameter_matrix_matches_ngspice": "passed",
+        "classic_transient_temperature_matrix_matches_ngspice": "passed",
+        "continuation_recovery_matches_original_ngspice_bias": "passed",
+        "expansion_buck_matches_reference": "passed",
+        "expansion_switches_match_reference": "passed",
+        "expansion_transformer_matches_reference": "passed",
+        "instance_temperature_overrides_match_ngspice": "passed",
+        "mos1_process_and_sheet_resistance_match_reference": "passed",
+        "nonlinear_operating_points": "passed",
+        "numerical_stress_corpus_matches_ngspice": "passed",
+        "rc_ac_and_transient": "passed",
+        "semiconductor_ac_capacitances": "passed",
+        "stiff_nonlinear_transient_matches_reference_and_refinement": "passed",
+        "switching_rejections_and_restart": "passed",
+        "temperature_breakdown_and_base_resistance": "passed"
+      },
+      "log": "reports/logs/oracle.log",
+      "log_sha256": "5567c2d4126d5b1ffccc21abdcb3fda5de930c0b6521f0550249f01eed27e264",
+      "reference_version": "ngspice-47",
+      "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
+    },
+    "scale": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "ladder_10000": "passed"
+      },
+      "log": "reports/logs/scale.log",
+      "log_sha256": "d606c28329c6c63c9840bacf3fe42dd62a98a835c73d20db9f8fc4d540c52736"
+    },
+    "platform": {
+      "status": "passed",
+      "tests": {
+        "Linux": "passed",
+        "Darwin": "passed",
+        "Windows": "passed"
+      },
+      "evidence": "reports/platform-evidence.json"
+    }
+  },
+  "metrics": {
+    "total": {
+      "total": 48,
+      "implemented": 48,
+      "evidenced": 48,
+      "implementation_percent": 100.0,
+      "evidenced_percent": 100.0
+    },
+    "categories": {
+      "Analyses": {
+        "total": 8,
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Numerical core": {
+        "total": 8,
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Transient integration": {
+        "total": 8,
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Devices": {
+        "total": 8,
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Netlist compatibility": {
+        "total": 8,
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      },
+      "Library and acceptance": {
+        "total": 8,
+        "implemented": 8,
+        "evidenced": 8,
+        "implementation_percent": 100.0,
+        "evidenced_percent": 100.0
+      }
+    },
+    "criteria": [
+      {
+        "id": "A01",
+        "category": "Analyses",
+        "title": "DC operating point",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/divider_and_source_current",
+          "oracle/nonlinear_operating_points"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A02",
+        "category": "Analyses",
+        "title": "Independent-source DC sweep",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/divider_and_source_current"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A03",
+        "category": "Analyses",
+        "title": "Linear RC small-signal AC",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/rc_ac_and_transient"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A04",
+        "category": "Analyses",
+        "title": "Semiconductor bias-linearized AC",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/semiconductor_ac_capacitances"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A05",
+        "category": "Analyses",
+        "title": "Linear and decade frequency grids",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/ac_rc_cutoff",
+          "oracle/rc_ac_and_transient"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A06",
+        "category": "Analyses",
+        "title": "Octave frequency grids",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/octave_grid_matches_rc_transfer_function"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A07",
+        "category": "Analyses",
+        "title": "Nominal bias restored after DC sweep",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/ac_restores_nominal_nonlinear_bias_after_sweep"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "A08",
+        "category": "Analyses",
+        "title": "UIC transient initialization",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "parser/initial_conditions",
+          "analytical/floating_capacitor_ic_respects_existing_hint"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N01",
+        "category": "Numerical core",
+        "title": "MNA branch constraints and current sign conventions",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/divider_and_source_current"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N02",
+        "category": "Numerical core",
+        "title": "Sparse real and complex LU against dense Peroxide",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/linear.rs",
+        "checks": [
+          "core/linear::tests::peroxide_dense_oracle_and_complex"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N03",
+        "category": "Numerical core",
+        "title": "Row/column equilibration on badly scaled fixture",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/linear.rs",
+        "checks": [
+          "core/linear::tests::peroxide_dense_oracle_and_complex"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N04",
+        "category": "Numerical core",
+        "title": "Newton device derivatives and bias convergence",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/device.rs",
+        "checks": [
+          "core/device::tests::peroxide_jacobians_and_charge_conservation",
+          "oracle/nonlinear_operating_points"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N05",
+        "category": "Numerical core",
+        "title": "Gmin continuation through a direct-solve failure",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/simulator.rs",
+        "checks": [
+          "core/simulator::reliability_tests::gmin_recovers_after_direct_newton_failure",
+          "oracle/continuation_recovery_matches_original_ngspice_bias"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N06",
+        "category": "Numerical core",
+        "title": "Source stepping through a direct-solve failure",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/simulator.rs",
+        "checks": [
+          "core/simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure",
+          "oracle/continuation_recovery_matches_original_ngspice_bias"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N07",
+        "category": "Numerical core",
+        "title": "Singular circuits return errors",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/singular_is_error"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "N08",
+        "category": "Numerical core",
+        "title": "Independent concurrent simulators",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/concurrent_instances_and_cancellation"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T01",
+        "category": "Transient integration",
+        "title": "Backward Euler RC response",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/rc_transient_all_methods"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T02",
+        "category": "Transient integration",
+        "title": "Trapezoidal RC response",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/rc_transient_all_methods"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T03",
+        "category": "Transient integration",
+        "title": "BDF2 RC response",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/rc_transient_all_methods"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T04",
+        "category": "Transient integration",
+        "title": "Adaptive RL/RLC response",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/rl_and_rlc_transient"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T05",
+        "category": "Transient integration",
+        "title": "Rejected steps on a switching circuit",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/switching_rejections_and_restart"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T06",
+        "category": "Transient integration",
+        "title": "Source breakpoints and integrator restarts",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/switching_rejections_and_restart"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T07",
+        "category": "Transient integration",
+        "title": "Isolated accepted and trial histories",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/src/simulator.rs",
+        "checks": [
+          "core/simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories",
+          "oracle/switching_rejections_and_restart"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "T08",
+        "category": "Transient integration",
+        "title": "Conflicting ICs and resource limits return errors",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/conflicting_initial_conditions",
+          "analytical/tolerances_and_limits_are_checked"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D01",
+        "category": "Devices",
+        "title": "Linear resistor/capacitor/inductor behavior",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/divider_and_source_current",
+          "analytical/rl_and_rlc_transient"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D02",
+        "category": "Devices",
+        "title": "Independent DC/AC and pulse source fixtures",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/rc_ac_and_transient",
+          "oracle/switching_rejections_and_restart"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D03",
+        "category": "Devices",
+        "title": "Linear E/G/F/H controlled sources",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/dependent_sources",
+          "analytical/current_controlled_and_transconductance_sources"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D04",
+        "category": "Devices",
+        "title": "Complete planned legacy diode electrical parameter set",
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D05",
+        "category": "Devices",
+        "title": "Complete planned Gummel-Poon electrical parameter set",
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice",
+          "oracle/bjt_excess_phase_matches_reference"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D06",
+        "category": "Devices",
+        "title": "Complete planned MOS1 electrical parameter set",
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice",
+          "oracle/mos1_process_and_sheet_resistance_match_reference"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D07",
+        "category": "Devices",
+        "title": "Supported diode/BJT/MOS DC and capacitance subset",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/nonlinear_operating_points",
+          "oracle/semiconductor_ac_capacitances"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "D08",
+        "category": "Devices",
+        "title": "Supported-device temperature and breakdown fixtures",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "oracle/temperature_breakdown_and_base_resistance"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P01",
+        "category": "Netlist compatibility",
+        "title": "Numeric suffixes and bounded parameter expressions",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/expression.rs",
+        "checks": [
+          "expressions/expression::tests::expressions",
+          "parser/deep_expressions_are_bounded"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P02",
+        "category": "Netlist compatibility",
+        "title": "Parameter scoping and dependency cycles",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/hierarchy_and_scoping",
+          "expressions/expression::tests::cycles"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P03",
+        "category": "Netlist compatibility",
+        "title": "Model cards and line continuations",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/model_cards_and_continuations"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P04",
+        "category": "Netlist compatibility",
+        "title": "Subcircuit expansion and recursion rejection",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/hierarchy_and_scoping",
+          "parser/rejects_unsupported_fields"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P05",
+        "category": "Netlist compatibility",
+        "title": "Relative includes, case preservation and cycle rejection",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/include_cycle_and_case_sensitive_path"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P06",
+        "category": "Netlist compatibility",
+        "title": "Analysis directives and initial-condition syntax",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/example_netlists_compile",
+          "parser/initial_conditions"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P07",
+        "category": "Netlist compatibility",
+        "title": "Unsupported features fail explicitly",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/rejects_unsupported_fields"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "P08",
+        "category": "Netlist compatibility",
+        "title": "Malformed-input and nesting limits",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/src/lib.rs",
+        "checks": [
+          "parser/malformed_inputs_return_errors",
+          "parser/deep_expressions_are_bounded"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L01",
+        "category": "Library and acceptance",
+        "title": "Typed embeddable circuit API",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/divider_and_source_current"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L02",
+        "category": "Library and acceptance",
+        "title": "Batch CLI CSV and nonzero error exits",
+        "implemented": true,
+        "evidence": "crates/risc-c-cli/tests/batch.rs",
+        "checks": [
+          "cli/stdout_csv_and_failure_exit"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L03",
+        "category": "Library and acceptance",
+        "title": "Failed analyses do not publish successful result files",
+        "implemented": true,
+        "evidence": "crates/risc-c-cli/tests/batch.rs",
+        "checks": [
+          "cli/simulation_failure_does_not_publish_results"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L04",
+        "category": "Library and acceptance",
+        "title": "Streaming cancellation and reuse",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/tests/analytical.rs",
+        "checks": [
+          "analytical/concurrent_instances_and_cancellation"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L05",
+        "category": "Library and acceptance",
+        "title": "10,000-node sparse benchmark executes",
+        "implemented": true,
+        "evidence": "crates/risc-c-core/examples/ladder.rs",
+        "checks": [
+          "scale/ladder_10000"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L06",
+        "category": "Library and acceptance",
+        "title": "Observed Linux/macOS/Windows numerical acceptance",
+        "implemented": true,
+        "evidence": "docs/STATUS.md",
+        "checks": [
+          "platform/Linux",
+          "platform/Darwin",
+          "platform/Windows"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L07",
+        "category": "Library and acceptance",
+        "title": "Bistability, difficult-pivot and stiff nonlinear stress corpus",
+        "implemented": true,
+        "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
+        "checks": [
+          "parser/bistable_latch_and_scaled_pivots",
+          "oracle/numerical_stress_corpus_matches_ngspice",
+          "oracle/stiff_nonlinear_transient_matches_reference_and_refinement",
+          "core/simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors"
+        ],
+        "state": "evidenced"
+      },
+      {
+        "id": "L08",
+        "category": "Library and acceptance",
+        "title": "Full planned legacy-model regression matrix",
+        "implemented": true,
+        "evidence": "docs/LEGACY_PARAMETER_AUDIT.md",
+        "checks": [
+          "parser/every_classic_electrical_parameter_is_accepted",
+          "oracle/classic_parameter_matrix_matches_ngspice",
+          "oracle/classic_transient_temperature_matrix_matches_ngspice",
+          "oracle/instance_temperature_overrides_match_ngspice"
+        ],
+        "state": "evidenced"
+      }
+    ],
+    "oracle": {
+      "status": "passed",
+      "passed": 16,
+      "failed": 0,
+      "discovered": 16,
+      "pass_percent": 100.0
+    }
+  }
+}

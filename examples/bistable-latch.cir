@@ -1,0 +1,11 @@
+Cross-coupled MOS latch, selected stable state
+Vdd rail 0 3.3
+Ra rail a 10k
+Rb rail b 10k
+Ma a b 0 0 n W=10u L=1u
+Mb b a 0 0 n W=10u L=1u
+.model n NMOS(VTO=1 KP=100u LAMBDA=0.02)
+.nodeset V(a)=3.3 V(b)=0
+.options reltol=1e-8 vntol=1e-10 abstol=1e-14
+.op
+.end

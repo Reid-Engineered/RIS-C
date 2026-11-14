@@ -1,0 +1,12 @@
+Coupled fast diode and slow RC storage (nanoseconds to milliseconds)
+V1 in 0 DC 0 PULSE(0 1 0 10n 10n 10m 20m)
+Rdrive in fast 1k
+D1 fast 0 junction
+Cfast fast 0 1p
+Rcouple fast slow 1meg
+Cslow slow 0 1n
+Rload slow 0 10meg
+.model junction D(IS=1e-14 N=1 CJO=2p TT=1n)
+.options method=gear maxord=2 reltol=1e-8 vntol=1e-10 abstol=1e-14
+.tran 20u 3m 0 20u
+.end

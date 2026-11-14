@@ -1,0 +1,16 @@
+[workspace]
+members = ["crates/risc-c-core", "crates/risc-c-netlist", "crates/risc-c-cli"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+rust-version = "1.91"
+
+[workspace.dependencies]
+faer = { version = "=0.24.4", default-features = false, features = ["std", "sparse-linalg"] }
+peroxide = { version = "=0.43.1", default-features = false }
+num-complex = "0.4.6"
+thiserror = "2"
+

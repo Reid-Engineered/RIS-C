@@ -1,0 +1,11 @@
+/target/
+/.cargo/
+/.rustup/
+/reference/*.tar.gz
+/reference/ngspice-47/
+/reference/build/
+*.csv
+
+
+/reports/logs/
+**/__pycache__/

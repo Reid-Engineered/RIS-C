@@ -1,0 +1,1800 @@
+use crate::{
+    circuit::{DeviceHistory, Evaluation, MeyerState, PhaseState},
+    *,
+};
+use std::{collections::HashMap, ops::ControlFlow};
+
+#[derive(Clone, Debug)]
+pub struct SolverOptions {
+    pub reltol: f64,
+    pub vntol: f64,
+    pub abstol: f64,
+    pub max_iterations: usize,
+    pub transient_reltol: f64,
+}
+impl Default for SolverOptions {
+    fn default() -> Self {
+        Self {
+            reltol: 1e-3,
+            vntol: 1e-6,
+            abstol: 1e-12,
+            max_iterations: 100,
+            transient_reltol: 1e-3,
+        }
+    }
+}
+impl SolverOptions {
+    pub fn precise() -> Self {
+        Self {
+            reltol: 1e-8,
+            vntol: 1e-10,
+            abstol: 1e-14,
+            max_iterations: 200,
+            transient_reltol: 1e-4,
+        }
+    }
+    fn validate(&self) -> Result<()> {
+        if [self.reltol, self.vntol, self.abstol, self.transient_reltol]
+            .iter()
+            .any(|v| !v.is_finite() || *v <= 0.0)
+            || self.max_iterations == 0
+        {
+            Err(Error::Analysis(
+                "invalid solver tolerances/iteration limit".into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+/// Strategy that last returned a solution of the original DC equations.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DcMethod {
+    Direct,
+    GminStepping,
+    SourceStepping,
+}
+#[derive(Clone, Debug, Default)]
+pub struct RunStats {
+    pub newton_iterations: usize,
+    pub factorizations: usize,
+    pub accepted_steps: usize,
+    pub rejected_steps: usize,
+    /// Total Newton attempts made with gmin or source continuation parameters.
+    pub continuation_attempts: usize,
+    pub direct_failures: usize,
+    pub gmin_attempts: usize,
+    pub source_attempts: usize,
+    pub dc_method: Option<DcMethod>,
+    /// Transient convergence at the representational precision floor, with updates still converged.
+    pub roundoff_limited_convergences: usize,
+    pub breakpoints: usize,
+    pub switch_transitions: usize,
+    pub switch_event_steps: usize,
+    pub minimum_step: Option<f64>,
+}
+#[derive(Clone, Debug)]
+pub struct Sample {
+    pub axis: f64,
+    pub values: Vec<f64>,
+}
+impl Sample {
+    pub fn get(&self, circuit: &CompiledCircuit, name: &str) -> Option<f64> {
+        if name.eq_ignore_ascii_case("v(0)") {
+            return Some(0.0);
+        }
+        circuit
+            .signals()
+            .iter()
+            .position(|s| s.eq_ignore_ascii_case(name))
+            .map(|k| self.values[k])
+    }
+}
+#[derive(Clone, Debug)]
+pub struct AcSample {
+    pub frequency: f64,
+    pub values: Vec<Complex64>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IntegrationMethod {
+    BackwardEuler,
+    Trapezoidal,
+    Bdf2,
+}
+#[derive(Clone, Debug)]
+pub struct TransientOptions {
+    pub stop: f64,
+    pub output_step: f64,
+    pub max_step: f64,
+    pub min_step: f64,
+    pub max_steps: usize,
+    pub max_retries: usize,
+    pub method: IntegrationMethod,
+    pub uic: bool,
+}
+impl TransientOptions {
+    pub fn new(stop: f64, output_step: f64) -> Self {
+        Self {
+            stop,
+            output_step,
+            max_step: output_step,
+            min_step: 1e-18,
+            max_steps: 1_000_000,
+            max_retries: 40,
+            method: IntegrationMethod::Trapezoidal,
+            uic: false,
+        }
+    }
+    fn validate(&self) -> Result<()> {
+        if [self.stop, self.output_step, self.max_step, self.min_step]
+            .iter()
+            .any(|v| !v.is_finite() || *v <= 0.0)
+            || self.min_step > self.max_step
+            || self.max_steps == 0
+            || self.max_retries == 0
+        {
+            Err(Error::Analysis(
+                "invalid transient interval or limits".into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+#[derive(Clone, Debug)]
+pub enum FrequencyGrid {
+    Linear {
+        points: usize,
+        start: f64,
+        stop: f64,
+    },
+    Decade {
+        points_per_decade: usize,
+        start: f64,
+        stop: f64,
+    },
+    Octave {
+        points_per_octave: usize,
+        start: f64,
+        stop: f64,
+    },
+}
+impl FrequencyGrid {
+    pub fn values(&self) -> Result<Vec<f64>> {
+        let (count, start, stop, base) = match *self {
+            Self::Linear {
+                points,
+                start,
+                stop,
+            } => (points, start, stop, 0.0_f64),
+            Self::Decade {
+                points_per_decade,
+                start,
+                stop,
+            } => (points_per_decade, start, stop, 10.0),
+            Self::Octave {
+                points_per_octave,
+                start,
+                stop,
+            } => (points_per_octave, start, stop, 2.0),
+        };
+        if count == 0
+            || count > 1_000_000
+            || !start.is_finite()
+            || !stop.is_finite()
+            || start < 0.0
+            || stop < start
+            || (base != 0.0 && start <= 0.0)
+        {
+            return Err(Error::Analysis("invalid frequency grid".into()));
+        }
+        if base == 0.0 {
+            Ok((0..count)
+                .map(|k| {
+                    if count == 1 {
+                        start
+                    } else {
+                        start + (stop - start) * k as f64 / (count - 1) as f64
+                    }
+                })
+                .collect())
+        } else {
+            let span = (stop / start).log(base) * count as f64;
+            let n = (span + 32.0 * f64::EPSILON * span.abs()).floor() as usize;
+            if n > 1_000_000 {
+                return Err(Error::Analysis("frequency grid too large".into()));
+            }
+            Ok((0..=n)
+                .map(|k| start * base.powf(k as f64 / count as f64))
+                .collect())
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+struct History {
+    time: f64,
+    x: Vec<f64>,
+    q: Vec<f64>,
+    dq: Vec<f64>,
+    previous_q: Option<Vec<f64>>,
+    step: Option<f64>,
+    meyer: Vec<Option<MeyerState>>,
+    phase: Vec<Option<PhaseState>>,
+    switches: Vec<bool>,
+}
+#[derive(Clone, Copy)]
+struct Dynamic<'a> {
+    a0: f64,
+    reference: &'a [f64],
+    history: &'a [f64],
+}
+struct Problem<'a> {
+    time: Option<f64>,
+    dynamic: Option<Dynamic<'a>>,
+    gmin: f64,
+    scale: f64,
+    source: Option<(&'a str, f64)>,
+    constraints: Option<&'a HashMap<usize, f64>>,
+    storage: Option<DeviceHistory<'a>>,
+    switches: Option<&'a [bool]>,
+}
+impl Default for Problem<'_> {
+    fn default() -> Self {
+        Self {
+            time: None,
+            dynamic: None,
+            gmin: 0.0,
+            scale: 1.0,
+            source: None,
+            constraints: None,
+            storage: None,
+            switches: None,
+        }
+    }
+}
+#[derive(Debug)]
+pub struct Simulator {
+    pub circuit: CompiledCircuit,
+    pub options: SolverOptions,
+    pub stats: RunStats,
+    state: Option<Vec<f64>>,
+    switches: Vec<bool>,
+}
+impl Simulator {
+    pub fn new(circuit: CompiledCircuit) -> Self {
+        let switches = circuit.0.initial_switches();
+        Self {
+            circuit,
+            options: Default::default(),
+            stats: Default::default(),
+            state: None,
+            switches,
+        }
+    }
+    pub fn operating_point(&mut self) -> Result<Sample> {
+        self.options.validate()?;
+        self.stats = Default::default();
+        let start = self
+            .state
+            .clone()
+            .unwrap_or_else(|| self.circuit.0.initial.clone());
+        let x = self.dc_solve(&start, None, None, None)?;
+        self.state = Some(x.clone());
+        Ok(Sample {
+            axis: 0.0,
+            values: x,
+        })
+    }
+    fn dc_solve(
+        &mut self,
+        start: &[f64],
+        time: Option<f64>,
+        source: Option<(&str, f64)>,
+        constraints: Option<&HashMap<usize, f64>>,
+    ) -> Result<Vec<f64>> {
+        let previous = self.switches.clone();
+        let x = self.dc_attempts(start, time, source, constraints, &previous)?;
+        self.switches = self
+            .circuit
+            .0
+            .evaluate_context(&x, time, 1.0, source, None, Some(&previous))?
+            .switches;
+        Ok(x)
+    }
+    fn dc_attempts(
+        &mut self,
+        start: &[f64],
+        time: Option<f64>,
+        source: Option<(&str, f64)>,
+        constraints: Option<&HashMap<usize, f64>>,
+        switches: &[bool],
+    ) -> Result<Vec<f64>> {
+        let p = Problem {
+            time,
+            source,
+            constraints,
+            switches: Some(switches),
+            ..Default::default()
+        };
+        if let Ok((x, _, _)) = self.newton(start, &p) {
+            self.stats.dc_method = Some(DcMethod::Direct);
+            return Ok(x);
+        }
+        self.stats.direct_failures += 1;
+        self.stats.dc_method = None;
+        // Each continuation begins from its own known state and ends on the original equations.
+        let mut x = start.to_vec();
+        let mut g = 1e-2;
+        let mut step = 0.5;
+        let mut attempts = 0;
+        self.stats.gmin_attempts += 1;
+        self.stats.continuation_attempts += 1;
+        if let Ok((y, _, _)) = self.newton(&x, &Problem { gmin: g, ..p }) {
+            x = y;
+            while g > 1e-12 && attempts < 100 {
+                let next = (g * step).max(1e-13);
+                attempts += 1;
+                self.stats.continuation_attempts += 1;
+                self.stats.gmin_attempts += 1;
+                match self.newton(&x, &Problem { gmin: next, ..p }) {
+                    Ok((y, _, _)) => {
+                        x = y;
+                        g = next;
+                        step = (step * 0.8).max(0.1);
+                    }
+                    Err(_) => {
+                        step = step.sqrt();
+                        if step > 0.999 {
+                            break;
+                        }
+                    }
+                }
+            }
+            if let Ok((y, _, _)) = self.newton(&x, &p) {
+                self.stats.dc_method = Some(DcMethod::GminStepping);
+                return Ok(y);
+            }
+        }
+        x = vec![0.0; start.len()];
+        let mut alpha = 0.0_f64;
+        let mut inc = 0.1_f64;
+        self.stats.source_attempts += 1;
+        self.stats.continuation_attempts += 1;
+        x = self.newton(&x, &Problem { scale: 0.0, ..p })?.0;
+        for _ in 0..150 {
+            let next = (alpha + inc).min(1.0_f64);
+            self.stats.continuation_attempts += 1;
+            self.stats.source_attempts += 1;
+            match self.newton(&x, &Problem { scale: next, ..p }) {
+                Ok((y, _, _)) => {
+                    x = y;
+                    alpha = next;
+                    inc = (inc * 1.5).min(0.25);
+                    if alpha == 1.0 {
+                        let (solution, _, _) = self.newton(&x, &p)?;
+                        self.stats.dc_method = Some(DcMethod::SourceStepping);
+                        return Ok(solution);
+                    }
+                }
+                Err(_) => {
+                    inc *= 0.5;
+                    if inc < 1e-8 {
+                        break;
+                    }
+                }
+            }
+        }
+        let (solution, _, _) = self.newton(&x, &p)?;
+        self.stats.dc_method = Some(DcMethod::SourceStepping);
+        Ok(solution)
+    }
+    fn residual(
+        &self,
+        e: &Evaluation,
+        x: &[f64],
+        p: &Problem<'_>,
+    ) -> (Vec<f64>, Vec<f64>, f64, f64) {
+        let data = &self.circuit.0;
+        let mut f = e.f.clone();
+        let mut jac = e.g.clone();
+        let mut scale = e.scale.clone();
+        if let Some(d) = &p.dynamic {
+            for k in 0..f.len() {
+                let storage = d.a0 * (e.q[k] - d.reference[k]) + d.history[k];
+                f[k] += storage;
+                scale[k] += storage.abs();
+            }
+            for (j, c) in jac.iter_mut().zip(&e.c) {
+                *j += d.a0 * c;
+            }
+        }
+        if p.gmin > 0.0 {
+            for k in 0..data.nvolt {
+                f[k] += p.gmin * x[k];
+                jac[data.pattern.slot(k, k)] += p.gmin;
+            }
+        }
+        if let Some(constraints) = p.constraints {
+            for (&r, &v) in constraints {
+                for &k in data.pattern.row_slots(r) {
+                    jac[k] = 0.0;
+                }
+                jac[data.pattern.slot(r, r)] = 1.0;
+                f[r] = x[r] - v;
+                scale[r] = x[r].abs().max(v.abs());
+            }
+        }
+        // Discretized storage subtracts nearly equal charges. Bound roundoff in
+        // both the charge values and their voltage/flux arguments rather than
+        // rejecting a converged update against an unrepresentable residual.
+        let mut rounding = vec![0.0; f.len()];
+        if let Some(dynamic) = &p.dynamic {
+            for (k, bound) in rounding.iter_mut().enumerate() {
+                *bound = dynamic.a0.abs() * (e.q[k].abs() + dynamic.reference[k].abs())
+                    + dynamic.history[k].abs();
+            }
+            for (slot, &(row, col)) in data.pattern.coords.iter().enumerate() {
+                rounding[row] += jac[slot].abs() * x[col].abs();
+            }
+            for bound in &mut rounding {
+                *bound *= 16.0 * f64::EPSILON;
+            }
+        }
+        let mut norm = 0.0_f64;
+        let mut requested_norm = 0.0_f64;
+        for (k, value) in f.iter().enumerate() {
+            let voltage_equation =
+                k >= data.nvolt || p.constraints.is_some_and(|m| m.contains_key(&k));
+            let tolerance = if voltage_equation {
+                self.options.vntol
+            } else {
+                self.options.abstol
+            } + self.options.reltol * scale[k];
+            requested_norm = requested_norm.max(value.abs() / tolerance);
+            norm = norm.max(value.abs() / (tolerance + rounding[k]));
+        }
+        (f, jac, norm, requested_norm)
+    }
+
+    fn newton(&mut self, start: &[f64], p: &Problem<'_>) -> Result<(Vec<f64>, Evaluation, bool)> {
+        let mut x = start.to_vec();
+        let mut last = f64::INFINITY;
+        let switches_present = self.circuit.0.has_switches;
+        let nonlinear = self.circuit.0.has_nonlinear;
+        for _ in 0..self.options.max_iterations {
+            self.stats.newton_iterations += 1;
+            let e = self
+                .circuit
+                .0
+                .evaluate_context(&x, p.time, p.scale, p.source, p.storage, p.switches)?;
+            let (f, jac, norm, requested_norm) = self.residual(&e, &x, p);
+            last = norm;
+            let rhs: Vec<_> = f.iter().map(|v| -v).collect();
+            self.stats.factorizations += 1;
+            let dx = self.circuit.0.pattern.solve(&jac, &rhs)?;
+            let update = dx
+                .iter()
+                .enumerate()
+                .map(|(k, v)| {
+                    v.abs()
+                        / (if k < self.circuit.0.nvolt {
+                            self.options.vntol
+                        } else {
+                            self.options.abstol
+                        } + self.options.reltol * x[k].abs())
+                })
+                .fold(0.0_f64, f64::max);
+            if norm <= 1.0 && update <= 1.0 {
+                if switches_present {
+                    let corrected: Vec<_> = x.iter().zip(&dx).map(|(a, b)| a + b).collect();
+                    let checked = self.circuit.0.evaluate_context(
+                        &corrected, p.time, p.scale, p.source, p.storage, p.switches,
+                    )?;
+                    let (_, _, checked_norm, checked_requested_norm) =
+                        self.residual(&checked, &corrected, p);
+                    if checked.switches != e.switches || checked_norm > 1.0 {
+                        x = corrected;
+                        continue;
+                    }
+                    return Ok((
+                        corrected,
+                        checked,
+                        p.dynamic.is_some() && checked_requested_norm > 1.0,
+                    ));
+                }
+                return Ok((x, e, p.dynamic.is_some() && requested_norm > 1.0));
+            }
+            // Dampen voltage updates, then backtrack on the actual nonlinear residual.
+            let maxdv = dx[..self.circuit.0.nvolt]
+                .iter()
+                .map(|v| v.abs())
+                .fold(0.0_f64, f64::max);
+            let mut alpha = if nonlinear {
+                (0.5 / maxdv).min(1.0)
+            } else {
+                1.0
+            };
+            // After a switch transition, a previously balanced internal node can
+            // temporarily receive a large current. A shared KCL scale lets line
+            // search traverse that redistribution; final convergence still uses
+            // each equation's original independent tolerances.
+            let current_scale = if switches_present {
+                e.scale[..self.circuit.0.nvolt]
+                    .iter()
+                    .copied()
+                    .fold(0.0, f64::max)
+            } else {
+                0.0
+            };
+            let weights: Vec<_> = e
+                .scale
+                .iter()
+                .enumerate()
+                .map(|(k, s)| {
+                    let abs = if k < self.circuit.0.nvolt {
+                        self.options.abstol
+                    } else {
+                        self.options.vntol
+                    };
+                    let scale = if k < self.circuit.0.nvolt {
+                        s.max(current_scale)
+                    } else {
+                        *s
+                    };
+                    abs + self.options.reltol * (scale + f[k].abs())
+                })
+                .collect();
+            let merit = |f: &[f64]| {
+                f.iter()
+                    .zip(&weights)
+                    .map(|(f, w)| f.abs() / w)
+                    .fold(0.0_f64, f64::max)
+            };
+            let baseline = merit(&f);
+            let mut candidate = x.clone();
+            for attempt in 0..16 {
+                for k in 0..x.len() {
+                    candidate[k] = x[k] + alpha * dx[k];
+                }
+                if !nonlinear {
+                    break;
+                }
+                if let Ok(next) = self
+                    .circuit
+                    .0
+                    .evaluate_context(&candidate, p.time, p.scale, p.source, p.storage, p.switches)
+                {
+                    let (nf, _, n, _) = self.residual(&next, &candidate, p);
+                    if merit(&nf) < baseline || n <= 1.0 || attempt == 15 {
+                        break;
+                    }
+                }
+                alpha *= 0.5;
+            }
+            if candidate.iter().any(|v| !v.is_finite()) {
+                return Err(Error::NonFinite("Newton update".into()));
+            }
+            x = candidate;
+        }
+        Err(Error::Convergence {
+            iterations: self.options.max_iterations,
+            residual: last,
+        })
+    }
+    pub fn dc_sweep(
+        &mut self,
+        source: &str,
+        start: f64,
+        stop: f64,
+        step: f64,
+    ) -> Result<Vec<Sample>> {
+        self.options.validate()?;
+        let source = source.to_ascii_lowercase();
+        if ![start, stop, step].iter().all(|v| v.is_finite())
+            || step == 0.0
+            || (stop - start) * step < 0.0
+        {
+            return Err(Error::Analysis("invalid DC sweep".into()));
+        }
+        if !self.circuit.0.devices.iter().any(|d| {
+            d.name == source && matches!(d.element, Element::Voltage(_) | Element::Current(_))
+        }) {
+            return Err(Error::Analysis(format!(
+                "{source} is not an independent source"
+            )));
+        }
+        let span = (stop - start) / step;
+        let count = (span + 32.0 * f64::EPSILON * span.abs()).floor() as usize;
+        if count > 1_000_000 {
+            return Err(Error::Analysis("DC sweep too large".into()));
+        }
+        self.stats = Default::default();
+        let mut x = self.circuit.0.initial.clone();
+        self.switches = self.circuit.0.initial_switches();
+        let mut samples = Vec::new();
+        for k in 0..=count {
+            let value = start + k as f64 * step;
+            x = self.dc_solve(&x, None, Some((&source, value)), None)?;
+            samples.push(Sample {
+                axis: value,
+                values: x.clone(),
+            });
+        }
+        // A swept operating point is not the nominal bias for a subsequent AC analysis.
+        self.state = None;
+        self.switches = self.circuit.0.initial_switches();
+        Ok(samples)
+    }
+    pub fn ac(&mut self, grid: &FrequencyGrid) -> Result<Vec<AcSample>> {
+        let frequencies = grid.values()?;
+        let op = self.operating_point()?;
+        let e = self.circuit.0.evaluate_ac(&op.values, &self.switches)?;
+        let rhs = self.circuit.0.ac_rhs();
+        let mut samples = Vec::new();
+        for frequency in frequencies {
+            let omega = std::f64::consts::TAU * frequency;
+            let a = self.circuit.0.ac_matrix(&e, &op.values, omega);
+            self.stats.factorizations += 1;
+            let values = self.circuit.0.pattern.solve_complex(&a, &rhs)?;
+            samples.push(AcSample { frequency, values });
+        }
+        Ok(samples)
+    }
+    fn initialize(&mut self, uic: bool) -> Result<History> {
+        let data = self.circuit.0.clone();
+        let (mut x, constraints) = crate::initial::constraints(&data, uic, Some(0.0))?;
+        if !uic {
+            x = self.dc_solve(&x, Some(0.0), None, Some(&constraints))?;
+        }
+        let e = data.evaluate_context(&x, Some(0.0), 1.0, None, None, Some(&self.switches))?;
+        Ok(History {
+            time: 0.0,
+            x,
+            q: e.q,
+            dq: e.f.iter().map(|v| -v).collect(),
+            previous_q: None,
+            step: None,
+            meyer: e.meyer,
+            phase: e.phase,
+            switches: e.switches,
+        })
+    }
+    fn take_step(
+        &mut self,
+        hist: &History,
+        h: f64,
+        method: IntegrationMethod,
+    ) -> Result<(History, Vec<f64>, bool)> {
+        let (a0, history) = match method {
+            IntegrationMethod::Trapezoidal if hist.step.is_some() => (
+                2.0 / h,
+                hist.q
+                    .iter()
+                    .zip(&hist.dq)
+                    .map(|(_, d)| -d)
+                    .collect::<Vec<_>>(),
+            ),
+            IntegrationMethod::Bdf2 if hist.previous_q.is_some() => {
+                let r = h / hist.step.unwrap();
+                let a0 = (1.0 + 2.0 * r) / (1.0 + r) / h;
+                let prev = hist.previous_q.as_ref().unwrap();
+                (
+                    a0,
+                    hist.q
+                        .iter()
+                        .zip(prev)
+                        .map(|(q, p)| r * r * (p - q) / ((1.0 + r) * h))
+                        .collect(),
+                )
+            }
+            _ => (1.0 / h, hist.q.iter().map(|_| 0.0).collect()),
+        };
+        let p = Problem {
+            time: Some(hist.time + h),
+            dynamic: Some(Dynamic {
+                a0,
+                reference: &hist.q,
+                history: &history,
+            }),
+            storage: Some(DeviceHistory {
+                meyer: &hist.meyer,
+                phase: &hist.phase,
+                step: h,
+                switches: &hist.switches,
+            }),
+            ..Default::default()
+        };
+        let (x, e, roundoff_limited) = self.newton(&hist.x, &p)?;
+        let dq =
+            e.q.iter()
+                .zip(&history)
+                .enumerate()
+                .map(|(k, (q, b))| a0 * (q - hist.q[k]) + b)
+                .collect();
+        let switches = self.circuit.0.next_switches(&x, &hist.switches);
+        Ok((
+            History {
+                time: hist.time + h,
+                x,
+                q: e.q,
+                dq,
+                previous_q: Some(hist.q.clone()),
+                step: Some(h),
+                meyer: e.meyer,
+                phase: e.phase,
+                switches,
+            },
+            e.c,
+            roundoff_limited,
+        ))
+    }
+    fn locate_switch_event(
+        &mut self,
+        start: &History,
+        end: &History,
+        dt: f64,
+        snap_end_crossing: bool,
+        method: IntegrationMethod,
+    ) -> Result<Option<f64>> {
+        let mut event: Option<f64> = None;
+        // Controls at a threshold can differ by one ulp. As with source/output
+        // alignment, do not retry localization below representable time accuracy.
+        let time_resolution = 16.0 * f64::EPSILON * end.time.abs().max(1e-30);
+        if dt <= time_resolution {
+            return Ok(None);
+        }
+        // Endpoint controls may jump at a source breakpoint. Probe just before
+        // the endpoint before interpolating a crossing into the interval. Keep
+        // this trial isolated from accepted storage and switch histories.
+        let before_end = if start.switches != end.switches {
+            Some(self.take_step(start, dt * (1.0 - 1e-6), method)?.0)
+        } else {
+            None
+        };
+        for (i, d) in self.circuit.0.devices.iter().enumerate() {
+            let model = match d.element {
+                Element::VoltageSwitch { model, .. } | Element::CurrentSwitch { model, .. } => {
+                    model
+                }
+                _ => continue,
+            };
+            if end.switches[i] == start.switches[i] {
+                continue;
+            }
+            if before_end
+                .as_ref()
+                .is_some_and(|h| h.switches[i] == start.switches[i])
+            {
+                if snap_end_crossing {
+                    event = Some(event.map_or(dt, |old| old.min(dt)));
+                }
+                continue;
+            }
+            let before = self.circuit.0.switch_control(d, &start.x);
+            let after = self.circuit.0.switch_control(d, &end.x);
+            let threshold = model.threshold
+                + if start.switches[i] {
+                    -model.hysteresis
+                } else {
+                    model.hysteresis
+                };
+            let fraction = (threshold - before) / (after - before);
+            if fraction > 1e-6 && fraction < 1.0 - 1e-6 {
+                let step = dt * fraction * (1.0 + 1e-7);
+                if step > time_resolution {
+                    event = Some(event.map_or(step, |old| old.min(step)));
+                }
+            } else if snap_end_crossing && fraction >= 1.0 - 1e-6 {
+                event = Some(event.map_or(dt, |old| old.min(dt)));
+            }
+        }
+        Ok(event)
+    }
+    /// Trial solves borrow accepted history; only the caller may commit a returned step.
+    fn estimate_step(
+        &mut self,
+        hist: &History,
+        h: f64,
+        method: IntegrationMethod,
+    ) -> Result<(History, f64, i32, Option<f64>, bool)> {
+        let (full, full_c, full_roundoff) = self.take_step(hist, h, method)?;
+        if let Some(event) = self.locate_switch_event(hist, &full, h, false, method)? {
+            return Ok((full, 0.0, 1, Some(event), false));
+        }
+        let midpoint = hist.time + h * 0.5;
+        if midpoint <= hist.time || midpoint >= full.time {
+            // There is no representable interior time for step doubling.
+            return Ok((full, 0.0, 1, None, full_roundoff));
+        }
+        let (half, _, half_roundoff) = self.take_step(hist, h * 0.5, method)?;
+        if let Some(event) = self.locate_switch_event(hist, &half, h * 0.5, true, method)? {
+            return Ok((full, 0.0, 1, Some(event), false));
+        }
+        // Land on the same endpoint as the coarse step rather than accumulating
+        // two separately rounded additions of h/2.
+        let second_h = full.time - half.time;
+        let (fine, _, fine_roundoff) = self.take_step(&half, second_h, method)?;
+        if let Some(event) = self.locate_switch_event(&half, &fine, second_h, false, method)? {
+            return Ok((full, 0.0, 1, Some(half.time - hist.time + event), false));
+        }
+        if half.switches != hist.switches && fine.switches != half.switches {
+            return Ok((full, 0.0, 1, Some(0.5 * h), false));
+        }
+        let order = if method == IntegrationMethod::BackwardEuler || hist.step.is_none() {
+            1
+        } else {
+            2
+        };
+        let divisor = (2.0_f64).powi(order) - 1.0;
+        let mut dynamic = vec![false; full.x.len()];
+        for (slot, &(_, col)) in self.circuit.0.pattern.coords.iter().enumerate() {
+            if full_c[slot] != 0.0 {
+                dynamic[col] = true;
+            }
+        }
+        let err = full
+            .x
+            .iter()
+            .zip(&fine.x)
+            .enumerate()
+            .filter(|(k, _)| dynamic[*k])
+            .map(|(k, (a, b))| {
+                let abs = if k < self.circuit.0.nvolt {
+                    self.options.vntol
+                } else {
+                    self.options.abstol
+                };
+                (a - b).abs()
+                    / (divisor * (abs + self.options.transient_reltol * a.abs().max(b.abs())))
+            })
+            .fold(0.0_f64, f64::max);
+        Ok((fine, err, order, None, half_roundoff || fine_roundoff))
+    }
+    pub fn transient(&mut self, options: &TransientOptions) -> Result<Vec<Sample>> {
+        let mut samples = Vec::new();
+        self.transient_with(options, |s| {
+            samples.push(s.clone());
+            ControlFlow::Continue(())
+        })?;
+        Ok(samples)
+    }
+    pub fn transient_with<F>(&mut self, options: &TransientOptions, mut sink: F) -> Result<()>
+    where
+        F: FnMut(&Sample) -> ControlFlow<()>,
+    {
+        options.validate()?;
+        self.options.validate()?;
+        self.stats = Default::default();
+        self.state = None;
+        self.switches = self.circuit.0.initial_switches();
+        let result = self.transient_loop(options, &mut sink);
+        self.state = None;
+        self.switches = self.circuit.0.initial_switches();
+        result
+    }
+    fn transient_loop<F>(&mut self, options: &TransientOptions, sink: &mut F) -> Result<()>
+    where
+        F: FnMut(&Sample) -> ControlFlow<()>,
+    {
+        let mut hist = self.initialize(options.uic)?;
+        if sink(&Sample {
+            axis: 0.0,
+            values: hist.x.clone(),
+        })
+        .is_break()
+        {
+            return Err(Error::Cancelled);
+        }
+        let mut h = (options.output_step * 0.01)
+            .min(options.max_step)
+            .max(options.min_step);
+        let mut output_index = 1_u64;
+        let mut accepted = 0;
+        let mut restart = true;
+        while hist.time < options.stop {
+            if accepted >= options.max_steps {
+                return Err(Error::TimeStep {
+                    time: hist.time,
+                    reason: "accepted-step limit".into(),
+                });
+            }
+            let output_time = (output_index as f64 * options.output_step).min(options.stop);
+            let output_time = if options.stop - output_time <= 16.0 * f64::EPSILON * options.stop {
+                options.stop
+            } else {
+                output_time
+            };
+            let breakpoint = self
+                .circuit
+                .0
+                .devices
+                .iter()
+                .filter_map(|d| match &d.element {
+                    Element::Voltage(s) | Element::Current(s) => s
+                        .waveform
+                        .as_ref()
+                        .and_then(|w| w.next_breakpoint(hist.time)),
+                    _ => None,
+                })
+                .min_by(f64::total_cmp);
+            let target = breakpoint
+                .map_or(output_time, |b| b.min(output_time))
+                .min(options.stop);
+            if target - hist.time <= 16.0 * f64::EPSILON * target.abs().max(1e-30) {
+                hist.time = target;
+                if breakpoint.is_some_and(|b| b == target) {
+                    hist.step = None;
+                    hist.previous_q = None;
+                    restart = true;
+                    self.stats.breakpoints += 1;
+                }
+                if target >= output_time {
+                    if sink(&Sample {
+                        axis: output_time,
+                        values: hist.x.clone(),
+                    })
+                    .is_break()
+                    {
+                        return Err(Error::Cancelled);
+                    }
+                    output_index += 1;
+                }
+                continue;
+            }
+            let planned_h = h.min(options.max_step).max(options.min_step);
+            let remaining = target - hist.time;
+            // Balance the last two steps when one planned step would leave a
+            // tiny remainder. Such a remainder amplifies charge roundoff into
+            // spurious branch currents even when the voltage update converges.
+            let split = remaining > planned_h
+                && remaining - planned_h < planned_h
+                && remaining * 0.5 >= options.min_step;
+            let clipped = remaining < planned_h || split;
+            h = if split {
+                remaining * 0.5
+            } else if clipped {
+                remaining
+            } else {
+                planned_h
+            };
+            let method = if restart {
+                IntegrationMethod::BackwardEuler
+            } else {
+                options.method
+            };
+            let mut retries = 0;
+            let mut last_failure = String::from("minimum step reached");
+            loop {
+                if hist.time + h == hist.time || ((retries > 0 || !clipped) && h < options.min_step)
+                {
+                    return Err(Error::TimeStep {
+                        time: hist.time,
+                        reason: last_failure.clone(),
+                    });
+                }
+                let trial = self.estimate_step(&hist, h, method);
+                match trial {
+                    Ok((_, _, _, Some(event), _)) => {
+                        h = event.clamp(h * 0.01, h * 0.999999);
+                        self.stats.switch_event_steps += 1;
+                        last_failure = "switch threshold localization".into();
+                    }
+                    Ok((next, err, order, None, roundoff_limited)) if err <= 1.0 => {
+                        self.stats.accepted_steps += 1;
+                        accepted += 1;
+                        if roundoff_limited {
+                            self.stats.roundoff_limited_convergences += 1;
+                        }
+                        let recorded_step = if clipped && retries == 0 {
+                            planned_h
+                        } else {
+                            h
+                        };
+                        self.stats.minimum_step = Some(
+                            self.stats
+                                .minimum_step
+                                .map_or(recorded_step, |v| v.min(recorded_step)),
+                        );
+                        let transitions = hist
+                            .switches
+                            .iter()
+                            .zip(&next.switches)
+                            .filter(|(a, b)| a != b)
+                            .count();
+                        hist = next;
+                        restart = false;
+                        if transitions > 0 {
+                            self.stats.switch_transitions += transitions;
+                            hist.step = None;
+                            hist.previous_q = None;
+                            restart = true;
+                        }
+                        if (hist.time - target).abs()
+                            <= 16.0 * f64::EPSILON * target.abs().max(1e-30)
+                        {
+                            hist.time = target;
+                        }
+                        if breakpoint.is_some_and(|b| b == target) && hist.time == target {
+                            self.stats.breakpoints += 1;
+                            hist.step = None;
+                            hist.previous_q = None;
+                            restart = true;
+                        }
+                        if hist.time >= output_time {
+                            if sink(&Sample {
+                                axis: output_time,
+                                values: hist.x.clone(),
+                            })
+                            .is_break()
+                            {
+                                return Err(Error::Cancelled);
+                            }
+                            output_index += 1;
+                        }
+                        h = if clipped && retries == 0 {
+                            planned_h
+                        } else {
+                            h * if err == 0.0 {
+                                2.0
+                            } else {
+                                (0.9 * err.powf(-1.0 / (order as f64 + 1.0))).clamp(0.5, 2.0)
+                            }
+                        };
+                        break;
+                    }
+                    Ok((_, err, order, None, _)) => {
+                        last_failure = format!("local error estimate {err:.3e}");
+                        h *= (0.8 * err.powf(-1.0 / (order as f64 + 1.0))).clamp(0.1, 0.5);
+                    }
+                    Err(
+                        e @ (Error::Convergence { .. } | Error::Singular(_) | Error::NonFinite(_)),
+                    ) => {
+                        last_failure = e.to_string();
+                        h *= 0.25;
+                    }
+                    Err(e) => return Err(e),
+                }
+                retries += 1;
+                self.stats.rejected_steps += 1;
+                if retries >= options.max_retries {
+                    return Err(Error::TimeStep {
+                        time: hist.time,
+                        reason: format!("retry limit: {last_failure}"),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+}
+#[cfg(test)]
+mod reliability_tests {
+    use super::*;
+
+    fn diode_bias(supply: f64, iterations: usize) -> Simulator {
+        let mut b = CircuitBuilder::new();
+        let a = b.node("in");
+        let o = b.node("out");
+        let g = NodeId::GROUND;
+        b.add("v", &[a, g], Element::Voltage(supply.into()))
+            .unwrap();
+        b.add("r", &[a, o], Element::Resistor(10000.0)).unwrap();
+        b.add(
+            "d",
+            &[o, g],
+            Element::Semiconductor {
+                model: Model::new(ModelKind::Diode),
+                geometry: Default::default(),
+            },
+        )
+        .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        s.options = SolverOptions::precise();
+        s.options.max_iterations = iterations;
+        s
+    }
+
+    fn assert_original_diode_equations(simulator: &Simulator, solution: &[f64], supply: f64) {
+        let c = &simulator.circuit;
+        let signal = |name: &str| solution[c.signals().iter().position(|s| s == name).unwrap()];
+        let input = signal("v(in)");
+        let vd = signal("v(out)");
+        assert!((input - supply).abs() < 1e-12);
+        let current = (input - vd) / 10000.0;
+        let thermal = (1.38064852e-23 / 1.6021766208e-19) * 300.15;
+        let diode = 1e-14 * ((vd / thermal).exp() - 1.0) + 1e-12 * vd;
+        assert!(
+            (current - diode).abs()
+                <= simulator.options.abstol
+                    + simulator.options.reltol * (current.abs() + diode.abs()),
+            "original KCL must hold at the configured tolerances without continuation shunts"
+        );
+        assert!((signal("i(v)") + current).abs() < 1e-12);
+        let e = c.0.evaluate(solution, None, 1.0, None).unwrap();
+        let (_, _, residual, _) = simulator.residual(&e, solution, &Problem::default());
+        assert!(residual <= 1.0, "original scaled residual is {residual}");
+    }
+
+    #[test]
+    fn gmin_recovers_after_direct_newton_failure() {
+        let mut s = diode_bias(1.0, 8);
+        let start = s.circuit.0.initial.clone();
+        assert!(matches!(
+            s.newton(&start, &Problem::default()),
+            Err(Error::Convergence { .. })
+        ));
+        let solution = s.operating_point().unwrap();
+        assert_eq!(s.stats.direct_failures, 1);
+        assert_eq!(s.stats.dc_method, Some(DcMethod::GminStepping));
+        assert!(s.stats.gmin_attempts > 1);
+        assert_eq!(s.stats.source_attempts, 0);
+        assert_eq!(s.stats.continuation_attempts, s.stats.gmin_attempts);
+        assert_original_diode_equations(&s, &solution.values, 1.0);
+        let mut reference = diode_bias(1.0, 200);
+        let reference = reference.operating_point().unwrap();
+        for (a, b) in solution.values.iter().zip(reference.values) {
+            assert!((a - b).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn source_stepping_recovers_after_direct_and_gmin_failure() {
+        let mut s = diode_bias(20.0, 12);
+        let start = s.circuit.0.initial.clone();
+        assert!(matches!(
+            s.newton(&start, &Problem::default()),
+            Err(Error::Convergence { .. })
+        ));
+        assert!(matches!(
+            s.newton(
+                &start,
+                &Problem {
+                    gmin: 1e-2,
+                    ..Default::default()
+                }
+            ),
+            Err(Error::Convergence { .. })
+        ));
+        let solution = s.operating_point().unwrap();
+        assert_eq!(s.stats.direct_failures, 1);
+        assert_eq!(s.stats.dc_method, Some(DcMethod::SourceStepping));
+        assert_eq!(s.stats.gmin_attempts, 1);
+        assert!(s.stats.source_attempts > 1);
+        assert_eq!(
+            s.stats.continuation_attempts,
+            s.stats.gmin_attempts + s.stats.source_attempts
+        );
+        assert_original_diode_equations(&s, &solution.values, 20.0);
+        let mut reference = diode_bias(20.0, 200);
+        let reference = reference.operating_point().unwrap();
+        for (a, b) in solution.values.iter().zip(reference.values) {
+            assert!((a - b).abs() < 1e-9);
+        }
+    }
+
+    fn meyer_inverter() -> Simulator {
+        let mut b = CircuitBuilder::new();
+        let rail = b.node("rail");
+        let input = b.node("input");
+        let output = b.node("output");
+        let g = NodeId::GROUND;
+        b.add("vdd", &[rail, g], Element::Voltage(5.0.into()))
+            .unwrap();
+        b.add(
+            "vin",
+            &[input, g],
+            Element::Voltage(Source {
+                dc: 0.0,
+                ac: Default::default(),
+                waveform: Some(Waveform::Pwl(vec![(0.0, 0.0), (100e-9, 5.0)])),
+            }),
+        )
+        .unwrap();
+        for (name, nodes, kind, threshold, kp, width) in [
+            (
+                "mn",
+                [output, input, g, g],
+                ModelKind::Nmos,
+                1.0,
+                100e-6,
+                10e-6,
+            ),
+            (
+                "mp",
+                [output, input, rail, rail],
+                ModelKind::Pmos,
+                -1.0,
+                50e-6,
+                20e-6,
+            ),
+        ] {
+            let model = Model::new(kind)
+                .parameter("vto", threshold)
+                .unwrap()
+                .parameter("kp", kp)
+                .unwrap()
+                .parameter("tox", 100e-9)
+                .unwrap();
+            b.add(
+                name,
+                &nodes,
+                Element::Semiconductor {
+                    model,
+                    geometry: Geometry {
+                        length: 1e-6,
+                        width,
+                        ..Default::default()
+                    },
+                },
+            )
+            .unwrap();
+        }
+        b.add(
+            "load",
+            &[output, g],
+            Element::Capacitor {
+                capacitance: 10e-12,
+                ic: None,
+            },
+        )
+        .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        s.options = SolverOptions::precise();
+        s
+    }
+
+    #[test]
+    fn rejected_trials_preserve_accepted_meyer_and_bdf_histories() {
+        for method in [
+            IntegrationMethod::BackwardEuler,
+            IntegrationMethod::Trapezoidal,
+            IntegrationMethod::Bdf2,
+        ] {
+            let mut s = meyer_inverter();
+            let initial = s.initialize(false).unwrap();
+            let (first, _, _) = s
+                .take_step(&initial, 1e-9, IntegrationMethod::BackwardEuler)
+                .unwrap();
+            let (accepted, _, _) = s.take_step(&first, 1e-9, method).unwrap();
+            let snapshot = accepted.clone();
+            assert!(accepted.previous_q.is_some());
+            assert!(
+                accepted
+                    .meyer
+                    .iter()
+                    .flatten()
+                    .any(|m| m.caps.iter().any(|c| *c > 0.0))
+            );
+            let (_, error, _, _, _) = s.estimate_step(&accepted, 80e-9, method).unwrap();
+            assert!(
+                error > 1.0,
+                "oversized trial must be rejected, error={error}, method={method:?}"
+            );
+            assert_eq!(
+                accepted, snapshot,
+                "LTE rejection must leave every accepted field unchanged"
+            );
+            let iterations = s.options.max_iterations;
+            s.options.max_iterations = 1;
+            assert!(matches!(
+                s.estimate_step(&accepted, 20e-9, method),
+                Err(Error::Convergence { .. })
+            ));
+            assert_eq!(
+                accepted, snapshot,
+                "Newton failure must not leak partial trial state"
+            );
+            s.options.max_iterations = iterations;
+            let (retry, _, _) = s.take_step(&accepted, 0.5e-9, method).unwrap();
+            let mut control = meyer_inverter();
+            let initial = control.initialize(false).unwrap();
+            let (first, _, _) = control
+                .take_step(&initial, 1e-9, IntegrationMethod::BackwardEuler)
+                .unwrap();
+            let (clean, _, _) = control.take_step(&first, 1e-9, method).unwrap();
+            let (expected, _, _) = control.take_step(&clean, 0.5e-9, method).unwrap();
+            assert_eq!(
+                retry, expected,
+                "retry after rejected trials must match a clean run"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod switch_history_tests {
+    use super::*;
+    fn switched() -> Simulator {
+        let mut b = CircuitBuilder::new();
+        let z = NodeId::GROUND;
+        let rail = b.node("rail");
+        let control = b.node("control");
+        let out = b.node("out");
+        b.add("vrail", &[rail, z], Element::Voltage(1.0.into()))
+            .unwrap();
+        b.add(
+            "vctrl",
+            &[control, z],
+            Element::Voltage(Source {
+                dc: 0.0,
+                ac: Default::default(),
+                waveform: Some(Waveform::Pwl(vec![(0.0, 0.0), (0.001, 1.0)])),
+            }),
+        )
+        .unwrap();
+        b.add(
+            "s1",
+            &[rail, out, control, z],
+            Element::VoltageSwitch {
+                model: SwitchModel {
+                    threshold: 0.5,
+                    hysteresis: 0.1,
+                    ..Default::default()
+                },
+                initial_on: false,
+            },
+        )
+        .unwrap();
+        b.add("r", &[out, z], Element::Resistor(100.0)).unwrap();
+        b.add(
+            "c",
+            &[out, z],
+            Element::Capacitor {
+                capacitance: 1e-6,
+                ic: None,
+            },
+        )
+        .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        s.options = SolverOptions::precise();
+        s
+    }
+    #[test]
+    fn rejected_switch_trials_preserve_hysteresis_and_retry() {
+        for method in [
+            IntegrationMethod::BackwardEuler,
+            IntegrationMethod::Trapezoidal,
+            IntegrationMethod::Bdf2,
+        ] {
+            let mut s = switched();
+            let accepted = s.initialize(false).unwrap();
+            let snapshot = accepted.clone();
+            let (_, _, _, event, _) = s.estimate_step(&accepted, 0.0009, method).unwrap();
+            assert!(event.is_some());
+            assert!(
+                (event.unwrap() - 0.0006).abs() < 1e-9,
+                "upper threshold must be located in time"
+            );
+            assert_eq!(accepted, snapshot);
+            let limit = s.options.max_iterations;
+            s.options.max_iterations = 1;
+            assert!(s.take_step(&accepted, 0.0009, method).is_err());
+            assert_eq!(accepted, snapshot);
+            s.options.max_iterations = limit;
+            let (retry, _, _) = s.take_step(&accepted, 0.0001, method).unwrap();
+            let mut fresh = switched();
+            let initial = fresh.initialize(false).unwrap();
+            assert_eq!(retry, fresh.take_step(&initial, 0.0001, method).unwrap().0);
+            assert_eq!(
+                s.switches, fresh.switches,
+                "trial state must not leak into simulator DC state"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod excess_phase_history_tests {
+    use super::*;
+    fn amplifier() -> Simulator {
+        let mut b = CircuitBuilder::new();
+        let rail = b.node("rail");
+        let base = b.node("base");
+        let collector = b.node("collector");
+        let g = NodeId::GROUND;
+        b.add("vcc", &[rail, g], Element::Voltage(5.0.into()))
+            .unwrap();
+        b.add(
+            "vin",
+            &[base, g],
+            Element::Voltage(Source {
+                dc: 0.65,
+                ac: Default::default(),
+                waveform: Some(Waveform::Sin {
+                    offset: 0.65,
+                    amplitude: 0.001,
+                    frequency: 20e6,
+                    delay: 0.0,
+                    damping: 0.0,
+                    phase: 0.0,
+                }),
+            }),
+        )
+        .unwrap();
+        b.add("r", &[rail, collector], Element::Resistor(1000.0))
+            .unwrap();
+        b.add(
+            "c",
+            &[collector, g],
+            Element::Capacitor {
+                capacitance: 2e-12,
+                ic: None,
+            },
+        )
+        .unwrap();
+        b.add(
+            "q",
+            &[collector, base, g, g],
+            Element::Semiconductor {
+                model: Model::new(ModelKind::Npn)
+                    .parameter("is", 1e-14)
+                    .unwrap()
+                    .parameter("tf", 20e-9)
+                    .unwrap()
+                    .parameter("ptf", 45.0)
+                    .unwrap(),
+                geometry: Default::default(),
+            },
+        )
+        .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        s.options = SolverOptions::precise();
+        s
+    }
+    #[test]
+    fn excess_phase_history_survives_discarded_and_failed_trials() {
+        let mut s = amplifier();
+        let initial = s.initialize(false).unwrap();
+        let (accepted, _, _) = s
+            .take_step(&initial, 1e-9, IntegrationMethod::BackwardEuler)
+            .unwrap();
+        let snapshot = accepted.clone();
+        assert!(
+            accepted
+                .phase
+                .iter()
+                .flatten()
+                .any(|p| p.filtered != p.previous)
+        );
+        let _ = s.estimate_step(&accepted, 20e-9, IntegrationMethod::Trapezoidal);
+        assert_eq!(accepted, snapshot);
+        s.options.max_iterations = 1;
+        assert!(
+            s.estimate_step(&accepted, 20e-9, IntegrationMethod::Trapezoidal)
+                .is_err()
+        );
+        assert_eq!(accepted, snapshot);
+        s.options = SolverOptions::precise();
+        let (retry, _, _) = s
+            .take_step(&accepted, 0.25e-9, IntegrationMethod::Trapezoidal)
+            .unwrap();
+        let mut control = amplifier();
+        let initial = control.initialize(false).unwrap();
+        let (accepted, _, _) = control
+            .take_step(&initial, 1e-9, IntegrationMethod::BackwardEuler)
+            .unwrap();
+        let (expected, _, _) = control
+            .take_step(&accepted, 0.25e-9, IntegrationMethod::Trapezoidal)
+            .unwrap();
+        assert_eq!(retry, expected);
+    }
+}
+
+#[cfg(test)]
+mod precision_floor_tests {
+    use super::*;
+    #[test]
+    fn sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors() {
+        let mut b = CircuitBuilder::new();
+        let input = b.node("in");
+        let output = b.node("out");
+        let ground = NodeId::GROUND;
+        b.add("v", &[input, ground], Element::Voltage(2.0.into()))
+            .unwrap();
+        b.add("r", &[input, output], Element::Resistor(1000.0))
+            .unwrap();
+        b.add(
+            "c",
+            &[output, ground],
+            Element::Capacitor {
+                capacitance: 1.0,
+                ic: None,
+            },
+        )
+        .unwrap();
+        b.initial_voltage(output, 1.0).unwrap();
+        let circuit = b.build().compile().unwrap();
+        let mut s = circuit.simulator();
+        s.options = SolverOptions::precise();
+        let history = s.initialize(false).unwrap();
+        let (next, _, roundoff_limited) = s
+            .take_step(&history, 1e-15, IntegrationMethod::BackwardEuler)
+            .unwrap();
+        let index = circuit
+            .signals()
+            .iter()
+            .position(|n| n == "v(out)")
+            .unwrap();
+        // Exact change is about 1e-18 V, below one ULP at the 1 V bias.
+        assert_eq!(next.x[index], 1.0);
+        assert!(roundoff_limited);
+        // Trial take_step alone does not increment accepted transient stats.
+        assert_eq!(s.stats.roundoff_limited_convergences, 0);
+        let mut bad = history.clone();
+        let input = circuit.signals().iter().position(|n| n == "v(in)").unwrap();
+        bad.x[input] = 1.0;
+        s.options.max_iterations = 1;
+        assert!(
+            matches!(
+                s.take_step(&bad, 1e-15, IntegrationMethod::BackwardEuler),
+                Err(Error::Convergence { .. })
+            ),
+            "an unresolved ideal-source constraint must still fail"
+        );
+        s.options = SolverOptions::precise();
+        s.transient(&TransientOptions::new(1e-14, 1e-15)).unwrap();
+        assert!(s.stats.roundoff_limited_convergences > 0);
+    }
+
+    #[test]
+    fn roundoff_limited_convergences_ignores_op_and_rejected_trials() {
+        let mut b = CircuitBuilder::new();
+        let input = b.node("in");
+        let output = b.node("out");
+        let ground = NodeId::GROUND;
+        b.add("v", &[input, ground], Element::Voltage(2.0.into()))
+            .unwrap();
+        b.add("r", &[input, output], Element::Resistor(1000.0))
+            .unwrap();
+        b.add(
+            "c",
+            &[output, ground],
+            Element::Capacitor {
+                capacitance: 1.0,
+                ic: None,
+            },
+        )
+        .unwrap();
+        b.initial_voltage(output, 1.0).unwrap();
+        let circuit = b.build().compile().unwrap();
+        let mut s = circuit.simulator();
+        s.options = SolverOptions::precise();
+        s.operating_point().unwrap();
+        assert_eq!(s.stats.roundoff_limited_convergences, 0);
+
+        let history = s.initialize(false).unwrap();
+        let mut tight = history.clone();
+        tight.step = Some(1e-15);
+        // Force an LTE rejection or failed estimate_step and ensure stats stay 0.
+        let (_, _, _, _, _) = s
+            .estimate_step(&tight, 1e-15, IntegrationMethod::BackwardEuler)
+            .unwrap();
+        assert_eq!(s.stats.roundoff_limited_convergences, 0);
+    }
+}
+
+#[cfg(test)]
+mod review_regression_tests {
+    use super::*;
+
+    #[test]
+    fn step_doubling_preserves_the_endpoint_at_time_precision_limits() {
+        let mut b = CircuitBuilder::new();
+        let a = b.node("a");
+        b.add("v", &[a, NodeId::GROUND], Element::Voltage(1.0.into()))
+            .unwrap();
+        b.add("r", &[a, NodeId::GROUND], Element::Resistor(1000.0))
+            .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        let mut history = s.initialize(false).unwrap();
+        history.time = 1.0;
+        for h in [f64::EPSILON, 3.0 * f64::EPSILON] {
+            let (next, _, _, event, _) = s
+                .estimate_step(&history, h, IntegrationMethod::BackwardEuler)
+                .unwrap();
+            assert_eq!(next.time, history.time + h);
+            assert_eq!(next.x, history.x);
+            assert!(event.is_none());
+        }
+    }
+
+    #[test]
+    fn transient_initial_op_uses_t0_waveform_value() {
+        let mut b = CircuitBuilder::new();
+        let input = b.node("in");
+        let output = b.node("out");
+        let ground = NodeId::GROUND;
+        b.add(
+            "v",
+            &[input, ground],
+            Element::Voltage(Source {
+                dc: 5.0,
+                ac: Default::default(),
+                waveform: Some(Waveform::Pulse {
+                    low: 0.0,
+                    high: 5.0,
+                    delay: 1e-6,
+                    rise: 1e-6,
+                    fall: 1e-6,
+                    width: 5e-6,
+                    period: 10e-6,
+                }),
+            }),
+        )
+        .unwrap();
+        b.add("r", &[input, output], Element::Resistor(1000.0))
+            .unwrap();
+        b.add(
+            "c",
+            &[output, ground],
+            Element::Capacitor {
+                capacitance: 1e-9,
+                ic: None,
+            },
+        )
+        .unwrap();
+        b.add(
+            "c_shunt",
+            &[input, ground],
+            Element::Capacitor {
+                capacitance: 1e-9,
+                ic: None,
+            },
+        )
+        .unwrap();
+        let c = b.build().compile().unwrap();
+        let mut s = c.simulator();
+        s.options = SolverOptions::precise();
+
+        let op = s.operating_point().unwrap();
+        assert!((op.get(&c, "v(in)").unwrap() - 5.0).abs() < 1e-12);
+        assert!((op.get(&c, "v(out)").unwrap() - 5.0).abs() < 1e-12);
+
+        let samples = s.transient(&TransientOptions::new(5e-7, 1e-7)).unwrap();
+        for sample in &samples {
+            assert!(
+                sample.get(&c, "v(in)").unwrap().abs() < 1e-12,
+                "expected 0 V input before delay, got {}",
+                sample.get(&c, "v(in)").unwrap()
+            );
+            assert!(
+                sample.get(&c, "v(out)").unwrap().abs() < 1e-12,
+                "expected 0 V output before delay, got {}",
+                sample.get(&c, "v(out)").unwrap()
+            );
+            assert!(
+                sample.get(&c, "i(v)").unwrap().abs() < 1e-12,
+                "expected zero initial capacitor current spike, got {}",
+                sample.get(&c, "i(v)").unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn op_and_ac_independent_of_prior_transient() {
+        let mut b = CircuitBuilder::new();
+        let rail = b.node("rail");
+        let ctrl = b.node("ctrl");
+        let out = b.node("out");
+        let g = NodeId::GROUND;
+        b.add(
+            "vrail",
+            &[rail, g],
+            Element::Voltage(Source {
+                dc: 1.0,
+                ac: Complex64::new(1.0, 0.0),
+                waveform: None,
+            }),
+        )
+        .unwrap();
+        b.add(
+            "vctrl",
+            &[ctrl, g],
+            Element::Voltage(Source {
+                dc: 0.0,
+                ac: Default::default(),
+                waveform: Some(Waveform::Pwl(vec![(0.0, 0.0), (1e-4, 2.0), (2e-4, 0.0)])),
+            }),
+        )
+        .unwrap();
+        b.add(
+            "s1",
+            &[rail, out, ctrl, g],
+            Element::VoltageSwitch {
+                model: SwitchModel {
+                    ron: 1.0,
+                    roff: 1e9,
+                    threshold: 0.5,
+                    hysteresis: 0.6,
+                },
+                initial_on: false,
+            },
+        )
+        .unwrap();
+        b.add("r", &[out, g], Element::Resistor(100.0)).unwrap();
+        b.add(
+            "c",
+            &[out, g],
+            Element::Capacitor {
+                capacitance: 1e-9,
+                ic: None,
+            },
+        )
+        .unwrap();
+        let c = b.build().compile().unwrap();
+        let grid = FrequencyGrid::Linear {
+            points: 1,
+            start: 1000.0,
+            stop: 1000.0,
+        };
+
+        let mut s = c.simulator();
+        s.options = SolverOptions::precise();
+        let op_before = s.operating_point().unwrap();
+        let ac_before = s.ac(&grid).unwrap();
+
+        let tran = s.transient(&TransientOptions::new(2e-4, 5e-5)).unwrap();
+        // Switch latched ON during transient and remained ON at t = 2e-4.
+        assert!(tran.last().unwrap().get(&c, "v(out)").unwrap() > 0.98);
+
+        let op_after = s.operating_point().unwrap();
+        let ac_after = s.ac(&grid).unwrap();
+        assert_eq!(op_before.values, op_after.values);
+        assert_eq!(ac_before[0].values, ac_after[0].values);
+    }
+
+    #[test]
+    fn clipped_step_below_min_step_succeeds_and_recovers_step_size() {
+        let run_pwl = |knot: f64| {
+            let mut b = CircuitBuilder::new();
+            let input = b.node("in");
+            let output = b.node("out");
+            let ground = NodeId::GROUND;
+            b.add(
+                "v",
+                &[input, ground],
+                Element::Voltage(Source {
+                    dc: 0.0,
+                    ac: Default::default(),
+                    waveform: Some(Waveform::Pwl(vec![(0.0, 0.0), (knot, 0.0), (2e-6, 1.0)])),
+                }),
+            )
+            .unwrap();
+            b.add("r", &[input, output], Element::Resistor(1000.0))
+                .unwrap();
+            b.add(
+                "c",
+                &[output, ground],
+                Element::Capacitor {
+                    capacitance: 1e-9,
+                    ic: None,
+                },
+            )
+            .unwrap();
+            let c = b.build().compile().unwrap();
+            let mut s = c.simulator();
+            s.options = SolverOptions::precise();
+            let mut o = TransientOptions::new(3e-6, 1e-6);
+            o.max_step = 1e-6;
+            o.min_step = 1e-15;
+            let samples = s.transient(&o).unwrap();
+            (samples, s.stats)
+        };
+
+        let (_, aligned_stats) = run_pwl(1e-6);
+        let (samples, sliver_stats) = run_pwl(1e-6 + 1e-16);
+        assert_eq!(samples.len(), 4);
+        assert!(sliver_stats.breakpoints >= 2);
+        assert!(
+            sliver_stats.accepted_steps <= aligned_stats.accepted_steps + 2,
+            "step size must recover after clipped sliver (sliver={}, aligned={})",
+            sliver_stats.accepted_steps,
+            aligned_stats.accepted_steps
+        );
+        assert!(
+            sliver_stats.minimum_step.unwrap() >= 1e-15,
+            "clipped alignment sliver must not taint minimum_step: {:?}",
+            sliver_stats.minimum_step
+        );
+    }
+}
