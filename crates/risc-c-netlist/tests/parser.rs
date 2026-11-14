@@ -378,10 +378,24 @@ fn bjt_temperature_transients_survive_output_alignment() {
             let c = parsed.circuit.compile().unwrap();
             let mut sim = c.simulator();
             sim.options = parsed.solver_options;
-            let mut options = risc_c_core::TransientOptions::new(50e-9, 0.5e-9);
+            let mut options = risc_c_core::TransientOptions::new(10e-9, 0.5e-9);
             options.max_step = 0.0125e-9;
-            sim.transient(&options)
+            let actual = sim
+                .transient(&options)
                 .unwrap_or_else(|e| panic!("{kind}/{temp}: {e}"));
+            options.max_step *= 0.5;
+            let refined = sim.transient(&options).unwrap();
+            for (a, b) in actual.iter().zip(refined) {
+                for signal in ["i(vc)", "i(vb)", "i(vs)"] {
+                    let va = a.get(&c, signal).unwrap();
+                    let vb = b.get(&c, signal).unwrap();
+                    assert!(
+                        (va - vb).abs() <= 1e-9 + 2e-3 * va.abs().max(vb.abs()),
+                        "{kind}/{temp} {signal} at {}: {va} vs {vb}",
+                        a.axis
+                    );
+                }
+            }
         }
     }
 }

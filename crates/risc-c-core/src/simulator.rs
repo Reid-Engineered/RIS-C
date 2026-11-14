@@ -797,17 +797,25 @@ impl Simulator {
         h: f64,
         method: IntegrationMethod,
     ) -> Result<(History, f64, i32, Option<f64>, bool)> {
-        let (full, full_c, _) = self.take_step(hist, h, method)?;
+        let (full, full_c, full_roundoff) = self.take_step(hist, h, method)?;
         if let Some(event) = self.locate_switch_event(hist, &full, h, false, method)? {
             return Ok((full, 0.0, 1, Some(event), false));
+        }
+        let midpoint = hist.time + h * 0.5;
+        if midpoint <= hist.time || midpoint >= full.time {
+            // There is no representable interior time for step doubling.
+            return Ok((full, 0.0, 1, None, full_roundoff));
         }
         let (half, _, half_roundoff) = self.take_step(hist, h * 0.5, method)?;
         if let Some(event) = self.locate_switch_event(hist, &half, h * 0.5, true, method)? {
             return Ok((full, 0.0, 1, Some(event), false));
         }
-        let (fine, _, fine_roundoff) = self.take_step(&half, h * 0.5, method)?;
-        if let Some(event) = self.locate_switch_event(&half, &fine, h * 0.5, false, method)? {
-            return Ok((full, 0.0, 1, Some(0.5 * h + event), false));
+        // Land on the same endpoint as the coarse step rather than accumulating
+        // two separately rounded additions of h/2.
+        let second_h = full.time - half.time;
+        let (fine, _, fine_roundoff) = self.take_step(&half, second_h, method)?;
+        if let Some(event) = self.locate_switch_event(&half, &fine, second_h, false, method)? {
+            return Ok((full, 0.0, 1, Some(half.time - hist.time + event), false));
         }
         if half.switches != hist.switches && fine.switches != half.switches {
             return Ok((full, 0.0, 1, Some(0.5 * h), false));
@@ -934,9 +942,18 @@ impl Simulator {
                 continue;
             }
             let planned_h = h.min(options.max_step).max(options.min_step);
-            let clipped = target - hist.time < planned_h;
-            h = if clipped {
-                target - hist.time
+            let remaining = target - hist.time;
+            // Balance the last two steps when one planned step would leave a
+            // tiny remainder. Such a remainder amplifies charge roundoff into
+            // spurious branch currents even when the voltage update converges.
+            let split = remaining > planned_h
+                && remaining - planned_h < planned_h
+                && remaining * 0.5 >= options.min_step;
+            let clipped = remaining < planned_h || split;
+            h = if split {
+                remaining * 0.5
+            } else if clipped {
+                remaining
             } else {
                 planned_h
             };
@@ -1559,6 +1576,27 @@ mod precision_floor_tests {
 #[cfg(test)]
 mod review_regression_tests {
     use super::*;
+
+    #[test]
+    fn step_doubling_preserves_the_endpoint_at_time_precision_limits() {
+        let mut b = CircuitBuilder::new();
+        let a = b.node("a");
+        b.add("v", &[a, NodeId::GROUND], Element::Voltage(1.0.into()))
+            .unwrap();
+        b.add("r", &[a, NodeId::GROUND], Element::Resistor(1000.0))
+            .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        let mut history = s.initialize(false).unwrap();
+        history.time = 1.0;
+        for h in [f64::EPSILON, 3.0 * f64::EPSILON] {
+            let (next, _, _, event, _) = s
+                .estimate_step(&history, h, IntegrationMethod::BackwardEuler)
+                .unwrap();
+            assert_eq!(next.time, history.time + h);
+            assert_eq!(next.x, history.x);
+            assert!(event.is_none());
+        }
+    }
 
     #[test]
     fn transient_initial_op_uses_t0_waveform_value() {
