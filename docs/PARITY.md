@@ -1,12 +1,12 @@
 # Core parity report
 
-Scope: **core-v1.0**, reference **ngspice 47**. Generated 2026-11-13T22:24:49+00:00.
+Scope: **core-v1.0**, reference **ngspice 47**. Generated 2026-11-14T00:40:51+00:00.
 
-**Evidence-backed checklist coverage: 100.00% (48/48).**
+**Evidence-backed checklist coverage: 97.92% (47/48).**
 
 Implementation checklist coverage: **100.00% (48/48)**.
 
-ngspice comparison pass rate: **100.00% (13/13 executed test groups)**; oracle status: `passed`.
+ngspice comparison pass rate: **100.00% (16/16 executed test groups)**; oracle status: `passed`.
 
 These percentages describe the agreed core checklist, not all of ngspice, numerical accuracy, engineering effort, or production readiness. Each criterion has one point. Missing, untested, skipped, failed, or unavailable criteria receive no evidence credit; partial implementations receive no implementation credit. A passing witness covers its named fixtures, not every circuit that might use a feature. Oracle counts are test groups, not individual circuits or sample points.
 
@@ -17,7 +17,7 @@ These percentages describe the agreed core checklist, not all of ngspice, numeri
 | Transient integration | 8/8 | 8/8 | 100.00% |
 | Devices | 8/8 | 8/8 | 100.00% |
 | Netlist compatibility | 8/8 | 8/8 | 100.00% |
-| Library and acceptance | 8/8 | 8/8 | 100.00% |
+| Library and acceptance | 8/8 | 7/8 | 87.50% |
 
 ## Acceptance checklist
 
@@ -68,7 +68,7 @@ These percentages describe the agreed core checklist, not all of ngspice, numeri
 | L03 | Failed analyses do not publish successful result files | evidenced | [crates/spice-cli/tests/batch.rs](../crates/spice-cli/tests/batch.rs); `cli/simulation_failure_does_not_publish_results` |
 | L04 | Streaming cancellation and reuse | evidenced | [crates/spice-core/tests/analytical.rs](../crates/spice-core/tests/analytical.rs); `analytical/concurrent_instances_and_cancellation` |
 | L05 | 10,000-node sparse benchmark executes | evidenced | [crates/spice-core/examples/ladder.rs](../crates/spice-core/examples/ladder.rs); `scale/ladder_10000` |
-| L06 | Observed Linux/macOS/Windows numerical acceptance | evidenced | [docs/STATUS.md](../docs/STATUS.md); `platform/Linux`, `platform/Darwin`, `platform/Windows` |
+| L06 | Observed Linux/macOS/Windows numerical acceptance | implemented, evidence incomplete | [docs/STATUS.md](../docs/STATUS.md); `platform/Linux`, `platform/Darwin`, `platform/Windows` |
 | L07 | Bistability, difficult-pivot and stiff nonlinear stress corpus | evidenced | [crates/spice-netlist/tests/ngspice.rs](../crates/spice-netlist/tests/ngspice.rs); `parser/bistable_latch_and_scaled_pivots`, `oracle/numerical_stress_corpus_matches_ngspice`, `oracle/stiff_nonlinear_transient_matches_reference_and_refinement`, `core/simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors` |
 | L08 | Full planned legacy-model regression matrix | evidenced | [docs/LEGACY_PARAMETER_AUDIT.md](../docs/LEGACY_PARAMETER_AUDIT.md); `parser/every_classic_electrical_parameter_is_accepted`, `oracle/classic_parameter_matrix_matches_ngspice`, `oracle/classic_transient_temperature_matrix_matches_ngspice`, `oracle/instance_temperature_overrides_match_ngspice` |
 
@@ -80,4 +80,4 @@ Run `python3 scripts/parity.py --check` to detect stale source inputs, changed s
 
 The denominator is versioned in [parity-scope.json](../reports/parity-scope.json). Changing criteria requires a scope-version bump and an entry in its change log; compare history only within the same scope version. [History](../reports/parity-history.jsonl) records source/metric changes without duplicating identical reruns. [Machine-readable snapshot](../reports/parity.json) contains per-suite outcomes and source hashes.
 
-Source SHA-256: `cac3e4eeb0f5fba4108b4142d3efcbc0bc4f06e8bb25fdfe3bd89c6a3f4148ad`.
+Source SHA-256: `fa51fd92f9d626d88a5e99e4fb73ecc41337bcf5f964b9c4973a861bd326c92b`.

@@ -78,6 +78,16 @@ impl CircuitBuilder {
                     error::valid(*v, &name, false)?;
                 }
             }
+            Element::Mutual { coupling, .. } => {
+                if !coupling.is_finite() || coupling.abs() > 1.0 {
+                    return Err(Error::Circuit(
+                        "coupling coefficient must be in [-1,1]".into(),
+                    ));
+                }
+            }
+            Element::VoltageSwitch { model, .. } | Element::CurrentSwitch { model, .. } => {
+                model.validate()?
+            }
             Element::Voltage(s) | Element::Current(s) => s.validate()?,
             Element::Vcvs(v)
             | Element::Vccs(v)
@@ -181,6 +191,7 @@ pub(crate) struct CompiledData {
     pub temperature: f64,
     pub initial: Vec<f64>,
     pub ic: HashMap<usize, f64>,
+    pub mutual: Vec<(usize, usize, f64)>,
 }
 #[derive(Clone, Debug)]
 pub struct CompiledCircuit(pub(crate) Arc<CompiledData>);
@@ -249,11 +260,21 @@ impl Circuit {
         if names.is_empty() {
             return Err(Error::Circuit("circuit has no unknowns".into()));
         }
+        let mutual = crate::coupling::compile(&devices, &branches)?;
         let mut entries: BTreeSet<_> = (0..names.len()).map(|i| (i, i)).collect();
+        for &(a, b, _) in &mutual {
+            entries.insert((a, b));
+            entries.insert((b, a));
+        }
         let mut out = Vec::new();
         for d in devices {
+            if matches!(d.element, Element::Mutual { .. }) {
+                continue;
+            }
             let control = match &d.element {
-                Element::Cccs { control, .. } | Element::Ccvs { control, .. } => {
+                Element::Cccs { control, .. }
+                | Element::Ccvs { control, .. }
+                | Element::CurrentSwitch { control, .. } => {
                     Some(*branches.get(&control.to_ascii_lowercase()).ok_or_else(|| {
                         Error::Circuit(format!(
                             "{}: control {control} has no branch current",
@@ -306,6 +327,7 @@ impl Circuit {
             temperature: self.temperature,
             initial,
             ic,
+            mutual,
         })))
     }
 }
@@ -337,6 +359,7 @@ pub(crate) struct DeviceHistory<'a> {
     pub meyer: &'a [Option<MeyerState>],
     pub phase: &'a [Option<PhaseState>],
     pub step: f64,
+    pub switches: &'a [bool],
 }
 #[derive(Debug)]
 pub(crate) struct Evaluation {
@@ -347,8 +370,44 @@ pub(crate) struct Evaluation {
     pub scale: Vec<f64>,
     pub meyer: Vec<Option<MeyerState>>,
     pub phase: Vec<Option<PhaseState>>,
+    pub switches: Vec<bool>,
+}
+struct EvaluationMode<'a> {
+    switches: Option<&'a [bool]>,
+    small_signal: bool,
 }
 impl CompiledData {
+    pub fn initial_switches(&self) -> Vec<bool> {
+        self.devices
+            .iter()
+            .map(|d| match d.element {
+                Element::VoltageSwitch { initial_on, .. }
+                | Element::CurrentSwitch { initial_on, .. } => initial_on,
+                _ => false,
+            })
+            .collect()
+    }
+    pub fn switch_control(&self, d: &CompiledDevice, x: &[f64]) -> f64 {
+        let val = |n: Option<usize>| n.map_or(0.0, |k| x[k]);
+        match d.element {
+            Element::VoltageSwitch { .. } => val(d.nodes[2]) - val(d.nodes[3]),
+            Element::CurrentSwitch { .. } => val(d.control),
+            _ => 0.0,
+        }
+    }
+    pub fn next_switches(&self, x: &[f64], previous: &[bool]) -> Vec<bool> {
+        self.devices
+            .iter()
+            .enumerate()
+            .map(|(i, d)| match d.element {
+                Element::VoltageSwitch { model, .. } | Element::CurrentSwitch { model, .. } => {
+                    model.state(self.switch_control(d, x), previous[i])
+                }
+                _ => false,
+            })
+            .collect()
+    }
+    #[cfg(test)]
     pub fn evaluate(
         &self,
         x: &[f64],
@@ -366,10 +425,41 @@ impl CompiledData {
         override_source: Option<(&str, f64)>,
         previous: Option<DeviceHistory<'_>>,
     ) -> Result<Evaluation> {
-        self.evaluate_mode(x, time, source_scale, override_source, previous, false)
+        self.evaluate_context(x, time, source_scale, override_source, previous, None)
     }
-    pub fn evaluate_ac(&self, x: &[f64]) -> Result<Evaluation> {
-        self.evaluate_mode(x, None, 1.0, None, None, true)
+    pub fn evaluate_context(
+        &self,
+        x: &[f64],
+        time: Option<f64>,
+        source_scale: f64,
+        override_source: Option<(&str, f64)>,
+        previous: Option<DeviceHistory<'_>>,
+        switches: Option<&[bool]>,
+    ) -> Result<Evaluation> {
+        self.evaluate_mode(
+            x,
+            time,
+            source_scale,
+            override_source,
+            previous,
+            EvaluationMode {
+                switches,
+                small_signal: false,
+            },
+        )
+    }
+    pub fn evaluate_ac(&self, x: &[f64], switches: &[bool]) -> Result<Evaluation> {
+        self.evaluate_mode(
+            x,
+            None,
+            1.0,
+            None,
+            None,
+            EvaluationMode {
+                switches: Some(switches),
+                small_signal: true,
+            },
+        )
     }
     fn evaluate_mode(
         &self,
@@ -378,8 +468,12 @@ impl CompiledData {
         source_scale: f64,
         override_source: Option<(&str, f64)>,
         previous: Option<DeviceHistory<'_>>,
-        small_signal: bool,
+        mode: EvaluationMode<'_>,
     ) -> Result<Evaluation> {
+        let EvaluationMode {
+            switches,
+            small_signal,
+        } = mode;
         let n = self.names.len();
         let mut e = Evaluation {
             f: vec![0.0; n],
@@ -389,6 +483,7 @@ impl CompiledData {
             scale: vec![0.0; n],
             meyer: vec![None; self.devices.len()],
             phase: vec![None; self.devices.len()],
+            switches: vec![false; self.devices.len()],
         };
         for (device_index, d) in self.devices.iter().enumerate() {
             let val = |node: Option<usize>| node.map_or(0.0, |i| x[i]);
@@ -407,6 +502,34 @@ impl CompiledData {
                 }
             };
             match &d.element {
+                Element::VoltageSwitch { model, initial_on }
+                | Element::CurrentSwitch {
+                    model, initial_on, ..
+                } => {
+                    let old = switches
+                        .or(previous.map(|h| h.switches))
+                        .map_or(*initial_on, |s| s[device_index]);
+                    // Transient intervals end at localized crossings. Integrate the
+                    // interval with its accepted conductance, then commit its end state.
+                    let on = if small_signal || previous.is_some() {
+                        old
+                    } else {
+                        model.state(self.switch_control(d, x), old)
+                    };
+                    e.switches[device_index] = on;
+                    let g = if on {
+                        model.ron.recip()
+                    } else {
+                        model.roff.recip()
+                    };
+                    f(a, g * v);
+                    f(b, -g * v);
+                    stamp(a, a, g);
+                    stamp(a, b, -g);
+                    stamp(b, a, -g);
+                    stamp(b, b, g);
+                }
+                Element::Mutual { .. } => unreachable!("K is compiled as cross-flux stamps"),
                 Element::Resistor(r) => {
                     f(a, v / r);
                     f(b, -v / r);
@@ -462,8 +585,8 @@ impl CompiledData {
                     stamp(k, a, 1.0);
                     stamp(k, b, -1.0);
                     let k = k.unwrap();
-                    e.q[k] = -l * x[k];
-                    e.c[self.pattern.slot(k, k)] = -l;
+                    e.q[k] -= l * x[k];
+                    e.c[self.pattern.slot(k, k)] -= l;
                 }
                 Element::Vccs(gain) | Element::Vcvs(gain) => {
                     let p = d.nodes[2];
@@ -606,6 +729,12 @@ impl CompiledData {
                     }
                 }
             }
+        }
+        for &(a, b, m) in &self.mutual {
+            e.q[a] -= m * x[b];
+            e.q[b] -= m * x[a];
+            e.c[self.pattern.slot(a, b)] -= m;
+            e.c[self.pattern.slot(b, a)] -= m;
         }
         if e.f
             .iter()

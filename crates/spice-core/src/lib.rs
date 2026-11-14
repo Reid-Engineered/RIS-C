@@ -1,5 +1,6 @@
 //! Reentrant analog circuit simulation. Numerical state belongs to a Simulator.
 pub mod circuit;
+mod coupling;
 pub mod device;
 pub mod error;
 mod initial;

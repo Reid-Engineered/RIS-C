@@ -1,0 +1,9 @@
+Hysteretic voltage switch driving an RC load
+Vdd rail 0 5
+Vctrl ctrl 0 PWL(0 0 1m 1 2m 0 3m 1)
+S1 rail out ctrl 0 gate OFF
+.model gate SW(RON=2 ROFF=1meg VT=0.5 VH=0.1)
+Rload out 0 100
+Cload out 0 1u
+.tran 10u 3m 0 5u
+.end

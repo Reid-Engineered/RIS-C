@@ -17,6 +17,15 @@ python3 scripts/parity.py --check  # detect stale source or report edits without
 
 The local ngspice 47 reference is discovered automatically, or set `NGSPICE_BIN`. Without a reference, oracle coverage is reported as unmeasured. The report is a checklist metric, not a percentage of all ngspice features or engineering effort.
 
+Coupled inductors (`K`) and hysteretic voltage/current-controlled switches (`S`/`W`, `SW`/`CSW`) have a separate [expansion report](docs/EXPANSION.md), with transformer, switched-load, energy-balance, and buck-converter regressions. The original core checklist keeps its 48-item definition.
+
+```sh
+python3 scripts/expansion.py --run
+python3 scripts/expansion.py --check
+cargo run -p spice-cli -- run examples/transformer.cir --output transformer.csv
+cargo run -p spice-cli -- run examples/buck.cir --output buck.csv
+```
+
 ## Run
 
 Requires Rust 1.91+; tested here on Rust 1.100. No native numerical library or ngspice installation is required to run the simulator.

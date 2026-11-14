@@ -650,3 +650,121 @@ fn instance_temperature_overrides_match_ngspice() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires pinned external ngspice"]
+fn expansion_transformer_matches_reference() {
+    for coupling in [-1.0, -0.98, 0.0, 0.98, 1.0] {
+        let text = format!(
+            "Transformer\nV1 drive 0 DC 0 AC 1 SIN(0 1 1k)\nR1 drive p 10\nL1 p 0 10m\nL2 s 0 40m\nK1 L1 L2 {coupling}\nRload s 0 1k\n.options reltol=1e-8\n.end"
+        );
+        let p = parse_str(&text).unwrap();
+        let c = p.circuit.compile().unwrap();
+        let mut sim = c.simulator();
+        sim.options = SolverOptions::precise();
+        let ac = sim
+            .ac(&FrequencyGrid::Decade {
+                points_per_decade: 1,
+                start: 100.0,
+                stop: 1e5,
+            })
+            .unwrap();
+        let expected = oracle(&text, "ac dec 1 100 100k", "v(s)");
+        assert_eq!(ac.len(), expected.len());
+        let idx = c.signals().iter().position(|s| s == "v(s)").unwrap();
+        for (a, b) in ac.iter().zip(expected) {
+            compare(a.values[idx].re, b[1], 1e-6, 1e-9);
+            compare(a.values[idx].im, b[2], 1e-6, 1e-9);
+        }
+        let mut options = TransientOptions::new(0.002, 1e-5);
+        options.max_step = 2e-6;
+        let actual = sim.transient(&options).unwrap();
+        let reference = oracle(
+            &text,
+            "tran 10u 2m 0 0.5u\nlinearize v(s) i(l1) i(l2)",
+            "v(s) i(l1) i(l2)",
+        );
+        assert_eq!(actual.len(), reference.len());
+        for (a, b) in actual.iter().zip(reference) {
+            for (k, name) in ["v(s)", "i(l1)", "i(l2)"].iter().enumerate() {
+                compare(
+                    a.get(&c, name).unwrap(),
+                    b[k + 1],
+                    0.002,
+                    if k == 0 { 1e-4 } else { 1e-6 },
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires pinned external ngspice"]
+fn expansion_switches_match_reference() {
+    for current in [false, true] {
+        let control = if current {
+            "Ictrl 0 ctrl PWL(0 0 1m 1 2m 0)\nVsense ctrl 0 0\nW1 rail out Vsense gate\n.model gate CSW(RON=2 ROFF=1meg IT=0.5 IH=0.1)"
+        } else {
+            "Vctrl ctrl 0 PWL(0 0 1m 1 2m 0)\nS1 rail out ctrl 0 gate\n.model gate SW(RON=2 ROFF=1meg VT=0.5 VH=0.1)"
+        };
+        let text = format!(
+            "Switched load\nVrail rail 0 5\nRload out 0 100\nCload out 0 1u\n{control}\n.options reltol=1e-7\n.end"
+        );
+        let p = parse_str(&text).unwrap();
+        let c = p.circuit.compile().unwrap();
+        let mut sim = c.simulator();
+        sim.options = SolverOptions::precise();
+        // Keep uniform comparison samples off the exact threshold instants;
+        // threshold equality is tested directly in the local event regression.
+        let mut o = TransientOptions::new(0.0022, 11e-6);
+        o.max_step = 1e-6;
+        let actual = sim.transient(&o).unwrap();
+        assert_eq!(sim.stats.switch_transitions, 2);
+        let expected = oracle(&text, "tran 11u 2.2m 0 0.01u\nlinearize v(out)", "v(out)");
+        assert_eq!(actual.len(), expected.len());
+        for (a, b) in actual.iter().zip(expected) {
+            compare(a.get(&c, "v(out)").unwrap(), b[1], 0.003, 0.003);
+        }
+        let source = if current { "ictrl" } else { "vctrl" };
+        for (start, stop, step) in [(0.0, 1.0, 0.05), (1.0, 0.0, -0.05)] {
+            let actual = sim.dc_sweep(source, start, stop, step).unwrap();
+            let expected = oracle(
+                &text,
+                &format!("dc {source} {start} {stop} {step}"),
+                "v(out)",
+            );
+            assert_eq!(actual.len(), expected.len());
+            for (a, b) in actual.iter().zip(expected) {
+                if (a.axis - 0.4).abs() > 1e-10 && (a.axis - 0.6).abs() > 1e-10 {
+                    compare(a.get(&c, "v(out)").unwrap(), b[1], 1e-6, 1e-8);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires pinned external ngspice"]
+fn expansion_buck_matches_reference() {
+    let text = include_str!("../../../examples/buck.cir");
+    let p = parse_str(text).unwrap();
+    let c = p.circuit.compile().unwrap();
+    let o = match &p.analyses[0] {
+        Analysis::Transient { options, .. } => options,
+        _ => panic!(),
+    };
+    let mut sim = c.simulator();
+    sim.options = p.solver_options;
+    sim.options.transient_reltol = 1e-4;
+    let actual = sim.transient(o).unwrap();
+    let reference = oracle(
+        text,
+        "tran 0.2u 400u 0 25n\nlinearize v(output) i(l1)",
+        "v(output) i(l1)",
+    );
+    assert_eq!(actual.len(), reference.len());
+    for (a, b) in actual.iter().zip(reference) {
+        compare(a.get(&c, "v(output)").unwrap(), b[1], 0.003, 0.01);
+        compare(a.get(&c, "i(l1)").unwrap(), b[2], 0.005, 0.005);
+    }
+}

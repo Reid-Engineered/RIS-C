@@ -674,15 +674,44 @@ impl Default for Geometry {
 #[derive(Clone, Debug)]
 pub enum Element {
     Resistor(f64),
-    Capacitor { capacitance: f64, ic: Option<f64> },
-    Inductor { inductance: f64, ic: Option<f64> },
+    Capacitor {
+        capacitance: f64,
+        ic: Option<f64>,
+    },
+    Inductor {
+        inductance: f64,
+        ic: Option<f64>,
+    },
+    /// Positive coupling uses the first terminal of each winding as its dot.
+    Mutual {
+        inductors: [String; 2],
+        coupling: f64,
+    },
+    VoltageSwitch {
+        model: SwitchModel,
+        initial_on: bool,
+    },
+    CurrentSwitch {
+        control: String,
+        model: SwitchModel,
+        initial_on: bool,
+    },
     Voltage(Source),
     Current(Source),
     Vcvs(f64),
     Vccs(f64),
-    Cccs { control: String, gain: f64 },
-    Ccvs { control: String, gain: f64 },
-    Semiconductor { model: Model, geometry: Geometry },
+    Cccs {
+        control: String,
+        gain: f64,
+    },
+    Ccvs {
+        control: String,
+        gain: f64,
+    },
+    Semiconductor {
+        model: Model,
+        geometry: Geometry,
+    },
 }
 impl Element {
     pub(crate) fn needs_branch(&self) -> bool {
@@ -693,6 +722,8 @@ impl Element {
     }
     pub(crate) fn terminals(&self) -> usize {
         match self {
+            Self::Mutual { .. } => 0,
+            Self::VoltageSwitch { .. } => 4,
             Self::Vcvs(_) | Self::Vccs(_) => 4,
             Self::Semiconductor { model, .. } => {
                 if model.kind == ModelKind::Diode {
@@ -702,6 +733,53 @@ impl Element {
                 }
             }
             _ => 2,
+        }
+    }
+}
+
+/// Classic two-state switch. Hysteresis is the nonnegative half-width.
+#[derive(Clone, Copy, Debug)]
+pub struct SwitchModel {
+    pub ron: f64,
+    pub roff: f64,
+    pub threshold: f64,
+    pub hysteresis: f64,
+}
+impl Default for SwitchModel {
+    fn default() -> Self {
+        Self {
+            ron: 1.0,
+            roff: 1e12,
+            threshold: 0.0,
+            hysteresis: 0.0,
+        }
+    }
+}
+impl SwitchModel {
+    pub fn validate(&self) -> Result<()> {
+        crate::error::valid(self.ron, "RON", true)?;
+        crate::error::valid(self.roff, "ROFF", true)?;
+        crate::error::valid(self.threshold, "switch threshold", false)?;
+        crate::error::valid(self.hysteresis, "switch hysteresis", false)?;
+        if self.hysteresis < 0.0
+            || !self.ron.recip().is_finite()
+            || !self.roff.recip().is_finite()
+            || !(self.threshold + self.hysteresis).is_finite()
+            || !(self.threshold - self.hysteresis).is_finite()
+        {
+            return Err(Error::Circuit(
+                "invalid switch resistance or hysteresis".into(),
+            ));
+        }
+        Ok(())
+    }
+    pub(crate) fn state(self, control: f64, previous: bool) -> bool {
+        if control > self.threshold + self.hysteresis {
+            true
+        } else if control < self.threshold - self.hysteresis {
+            false
+        } else {
+            previous
         }
     }
 }

@@ -37,3 +37,9 @@ The [small implementation plan](RELIABILITY_PLAN.md) adds direct witnesses for o
 The initial-condition solver handles floating difference networks, consistent loops, conflicting constraints, and redundant constraints on ideal sources. Element IC applies with UIC; instance TEMP/DTEMP and OFF syntax are supported. Excess-phase and Meyer histories stay local to accepted/trial steps. Transient convergence explicitly accounts for representational charge-subtraction roundoff while still requiring the configured state-update tolerance.
 
 Remaining work after this classic core includes newer ngspice model extensions, broader vendor syntax, more stress/benchmark families, API stabilization, and production qualification. No all-ngspice compatibility or production-readiness claim is made by the version number. The six original completion gates remain visible in the same 48-item parity denominator.
+
+## Coupling and switch expansion
+
+The next increment adds K-coupled linear windings and S/W controlled switches with SW/CSW models, finite RON/ROFF, nonnegative hysteresis, and scoped model/control references. Symmetric cross-flux stamps work in AC and all three transient methods; multiwinding validation rejects negative magnetic-energy matrices while admitting ideal coupling.
+
+Switches retain accepted hysteresis through a DC sweep, freeze conductance for AC, and localize transient threshold crossings before committing state and restarting integration. Trial states remain isolated. A switching-specific shared KCL scale improves Newton line-search progress through current redistribution; final per-equation convergence tolerances stay unchanged. Transformer transfer/polarity, magnetic-energy decay, switched loads, history rollback, and buck-converter waveform/refinement/power balance have executable witnesses in the separate [eight-item report](EXPANSION.md). The original core definition remains unchanged.

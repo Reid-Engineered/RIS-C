@@ -21,7 +21,11 @@
 | Gummel–Poon equations/temperature | `src/spicelib/devices/bjt/bjtload.c`, `bjttemp.c`, `bjtsetup.c` |
 | MOS1 equations/temperature | `src/spicelib/devices/mos1/mos1load.c`, `mos1temp.c`, `mos1set.c` |
 | Meyer capacitances | `src/spicelib/devices/devsup.c`, `DEVqmeyer` |
+| Coupled linear inductors | `src/spicelib/devices/ind/indload.c`, `mutacld.c`, `mutsetup.c` |
+| Voltage/current-controlled switches | `src/spicelib/devices/sw/swload.c`, `swsetup.c`; `src/spicelib/devices/csw/cswload.c`, `cswsetup.c` |
 
 The parser and circuit ownership model are new Rust implementations. Netlist parsing does **not** port `frontend/numparam` (LGPL). Sparse factorization uses faer, not ngspice Sparse/KLU. Integration error control uses step doubling rather than ngspice's divided-difference truncation estimator. Neither internal timestep sequences nor bitwise agreement are promised.
+
+The coupling expansion adds a normalized multiwinding positive-semidefinite check. Switch event localization and immutable accepted/trial hysteresis histories are Rust mechanisms rather than a port of ngspice's iteration-state machine. Only nonnegative switch hysteresis is supported; see the separate expansion report and compatibility contract.
 
 The device implementation adapts the equations in the listed Berkeley/ngspice sources. Original file copyrights include Regents of the University of California (1990), Thomas L. Quarles (1985 author), AlansFixes (2000 modifications), and diode changes by Paolo Nenzi (2003), Dietmar Warning (2012), and Arpad Buermen (2025). Retained license text is in `THIRD_PARTY_NOTICES` at the workspace root. No manual passages or LGPL solver/parser implementations are copied.

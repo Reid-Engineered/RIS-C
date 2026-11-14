@@ -69,6 +69,8 @@ pub struct RunStats {
     /// Transient convergence at the representational precision floor, with updates still converged.
     pub roundoff_limited_convergences: usize,
     pub breakpoints: usize,
+    pub switch_transitions: usize,
+    pub switch_event_steps: usize,
     pub minimum_step: Option<f64>,
 }
 #[derive(Clone, Debug)]
@@ -218,6 +220,7 @@ struct History {
     step: Option<f64>,
     meyer: Vec<Option<MeyerState>>,
     phase: Vec<Option<PhaseState>>,
+    switches: Vec<bool>,
 }
 #[derive(Clone, Copy)]
 struct Dynamic<'a> {
@@ -233,6 +236,7 @@ struct Problem<'a> {
     source: Option<(&'a str, f64)>,
     constraints: Option<&'a HashMap<usize, f64>>,
     storage: Option<DeviceHistory<'a>>,
+    switches: Option<&'a [bool]>,
 }
 impl Default for Problem<'_> {
     fn default() -> Self {
@@ -244,6 +248,7 @@ impl Default for Problem<'_> {
             source: None,
             constraints: None,
             storage: None,
+            switches: None,
         }
     }
 }
@@ -253,14 +258,17 @@ pub struct Simulator {
     pub options: SolverOptions,
     pub stats: RunStats,
     state: Option<Vec<f64>>,
+    switches: Vec<bool>,
 }
 impl Simulator {
     pub fn new(circuit: CompiledCircuit) -> Self {
+        let switches = circuit.0.initial_switches();
         Self {
             circuit,
             options: Default::default(),
             stats: Default::default(),
             state: None,
+            switches,
         }
     }
     pub fn operating_point(&mut self) -> Result<Sample> {
@@ -283,9 +291,26 @@ impl Simulator {
         source: Option<(&str, f64)>,
         constraints: Option<&HashMap<usize, f64>>,
     ) -> Result<Vec<f64>> {
+        let previous = self.switches.clone();
+        let x = self.dc_attempts(start, source, constraints, &previous)?;
+        self.switches = self
+            .circuit
+            .0
+            .evaluate_context(&x, None, 1.0, source, None, Some(&previous))?
+            .switches;
+        Ok(x)
+    }
+    fn dc_attempts(
+        &mut self,
+        start: &[f64],
+        source: Option<(&str, f64)>,
+        constraints: Option<&HashMap<usize, f64>>,
+        switches: &[bool],
+    ) -> Result<Vec<f64>> {
         let p = Problem {
             source,
             constraints,
+            switches: Some(switches),
             ..Default::default()
         };
         if let Ok(x) = self.newton(start, &p) {
@@ -433,6 +458,12 @@ impl Simulator {
     fn newton(&mut self, start: &[f64], p: &Problem<'_>) -> Result<Vec<f64>> {
         let mut x = start.to_vec();
         let mut last = f64::INFINITY;
+        let switches_present = self.circuit.0.devices.iter().any(|d| {
+            matches!(
+                d.element,
+                Element::VoltageSwitch { .. } | Element::CurrentSwitch { .. }
+            )
+        });
         let nonlinear = self
             .circuit
             .0
@@ -444,7 +475,7 @@ impl Simulator {
             let e = self
                 .circuit
                 .0
-                .evaluate_storage(&x, p.time, p.scale, p.source, p.storage)?;
+                .evaluate_context(&x, p.time, p.scale, p.source, p.storage, p.switches)?;
             let (f, jac, norm, requested_norm) = self.residual(&e, &x, p);
             last = norm;
             let rhs: Vec<_> = f.iter().map(|v| -v).collect();
@@ -463,6 +494,22 @@ impl Simulator {
                 })
                 .fold(0.0_f64, f64::max);
             if norm <= 1.0 && update <= 1.0 {
+                if switches_present {
+                    let corrected: Vec<_> = x.iter().zip(&dx).map(|(a, b)| a + b).collect();
+                    let checked = self.circuit.0.evaluate_context(
+                        &corrected, p.time, p.scale, p.source, p.storage, p.switches,
+                    )?;
+                    if checked.switches != e.switches
+                        || self.residual(&checked, &corrected, p).2 > 1.0
+                    {
+                        x = corrected;
+                        continue;
+                    }
+                    if requested_norm > 1.0 {
+                        self.stats.roundoff_limited_convergences += 1;
+                    }
+                    return Ok(corrected);
+                }
                 if requested_norm > 1.0 {
                     self.stats.roundoff_limited_convergences += 1;
                 }
@@ -478,6 +525,18 @@ impl Simulator {
             } else {
                 1.0
             };
+            // After a switch transition, a previously balanced internal node can
+            // temporarily receive a large current. A shared KCL scale lets line
+            // search traverse that redistribution; final convergence still uses
+            // each equation's original independent tolerances.
+            let current_scale = if switches_present {
+                e.scale[..self.circuit.0.nvolt]
+                    .iter()
+                    .copied()
+                    .fold(0.0, f64::max)
+            } else {
+                0.0
+            };
             let weights: Vec<_> = e
                 .scale
                 .iter()
@@ -488,7 +547,12 @@ impl Simulator {
                     } else {
                         self.options.vntol
                     };
-                    abs + self.options.reltol * (s + f[k].abs())
+                    let scale = if k < self.circuit.0.nvolt {
+                        s.max(current_scale)
+                    } else {
+                        *s
+                    };
+                    abs + self.options.reltol * (scale + f[k].abs())
                 })
                 .collect();
             let merit = |f: &[f64]| {
@@ -509,7 +573,7 @@ impl Simulator {
                 if let Ok(next) = self
                     .circuit
                     .0
-                    .evaluate_storage(&candidate, p.time, p.scale, p.source, p.storage)
+                    .evaluate_context(&candidate, p.time, p.scale, p.source, p.storage, p.switches)
                 {
                     let (nf, _, n, _) = self.residual(&next, &candidate, p);
                     if merit(&nf) < baseline || n <= 1.0 || attempt == 15 {
@@ -560,6 +624,7 @@ impl Simulator {
         }
         self.stats = Default::default();
         let mut x = self.circuit.0.initial.clone();
+        self.switches = self.circuit.0.initial_switches();
         let mut samples = Vec::new();
         for k in 0..=count {
             let value = start + k as f64 * step;
@@ -571,12 +636,13 @@ impl Simulator {
         }
         // A swept operating point is not the nominal bias for a subsequent AC analysis.
         self.state = None;
+        self.switches = self.circuit.0.initial_switches();
         Ok(samples)
     }
     pub fn ac(&mut self, grid: &FrequencyGrid) -> Result<Vec<AcSample>> {
         let frequencies = grid.values()?;
         let op = self.operating_point()?;
-        let e = self.circuit.0.evaluate_ac(&op.values)?;
+        let e = self.circuit.0.evaluate_ac(&op.values, &self.switches)?;
         let rhs = self.circuit.0.ac_rhs();
         let mut samples = Vec::new();
         for frequency in frequencies {
@@ -594,7 +660,7 @@ impl Simulator {
         if !uic {
             x = self.dc_solve(&x, None, Some(&constraints))?;
         }
-        let e = data.evaluate(&x, Some(0.0), 1.0, None)?;
+        let e = data.evaluate_context(&x, Some(0.0), 1.0, None, None, Some(&self.switches))?;
         Ok(History {
             time: 0.0,
             x,
@@ -604,6 +670,7 @@ impl Simulator {
             step: None,
             meyer: e.meyer,
             phase: e.phase,
+            switches: e.switches,
         })
     }
     fn take_step(&mut self, hist: &History, h: f64, method: IntegrationMethod) -> Result<History> {
@@ -642,6 +709,7 @@ impl Simulator {
                 meyer: &hist.meyer,
                 phase: &hist.phase,
                 step: h,
+                switches: &hist.switches,
             }),
             ..Default::default()
         };
@@ -655,6 +723,7 @@ impl Simulator {
                 meyer: &hist.meyer,
                 phase: &hist.phase,
                 step: h,
+                switches: &hist.switches,
             }),
         )?;
         let dq =
@@ -663,6 +732,7 @@ impl Simulator {
                 .enumerate()
                 .map(|(k, (q, b))| a0 * (q - hist.q[k]) + b)
                 .collect();
+        let switches = self.circuit.0.next_switches(&x, &hist.switches);
         Ok(History {
             time: hist.time + h,
             x,
@@ -672,6 +742,7 @@ impl Simulator {
             step: Some(h),
             meyer: e.meyer,
             phase: e.phase,
+            switches,
         })
     }
     /// Trial solves borrow accepted history; only the caller may commit a returned step.
@@ -680,8 +751,36 @@ impl Simulator {
         hist: &History,
         h: f64,
         method: IntegrationMethod,
-    ) -> Result<(History, f64, i32)> {
+    ) -> Result<(History, f64, i32, Option<f64>)> {
         let full = self.take_step(hist, h, method)?;
+        let mut event: Option<f64> = None;
+        for (i, d) in self.circuit.0.devices.iter().enumerate() {
+            let model = match d.element {
+                Element::VoltageSwitch { model, .. } | Element::CurrentSwitch { model, .. } => {
+                    model
+                }
+                _ => continue,
+            };
+            if full.switches[i] == hist.switches[i] {
+                continue;
+            }
+            let before = self.circuit.0.switch_control(d, &hist.x);
+            let after = self.circuit.0.switch_control(d, &full.x);
+            let threshold = model.threshold
+                + if hist.switches[i] {
+                    -model.hysteresis
+                } else {
+                    model.hysteresis
+                };
+            let fraction = (threshold - before) / (after - before);
+            if fraction > 1e-6 && fraction < 1.0 - 1e-6 {
+                let step = h * fraction * (1.0 + 1e-7);
+                event = Some(event.map_or(step, |old| old.min(step)));
+            }
+        }
+        if event.is_some() {
+            return Ok((full, 0.0, 1, event));
+        }
         let half = self.take_step(hist, h * 0.5, method)?;
         let fine = self.take_step(&half, h * 0.5, method)?;
         let order = if method == IntegrationMethod::BackwardEuler || hist.step.is_none() {
@@ -699,6 +798,7 @@ impl Simulator {
                 meyer: &hist.meyer,
                 phase: &hist.phase,
                 step: h,
+                switches: &hist.switches,
             }),
         )?;
         let mut dynamic = vec![false; full.x.len()];
@@ -723,7 +823,7 @@ impl Simulator {
                     / (divisor * (abs + self.options.transient_reltol * a.abs().max(b.abs())))
             })
             .fold(0.0_f64, f64::max);
-        Ok((full, err, order))
+        Ok((full, err, order, None))
     }
     pub fn transient(&mut self, options: &TransientOptions) -> Result<Vec<Sample>> {
         let mut samples = Vec::new();
@@ -741,6 +841,7 @@ impl Simulator {
         self.options.validate()?;
         self.stats = Default::default();
         self.state = None;
+        self.switches = self.circuit.0.initial_switches();
         let mut hist = self.initialize(options.uic)?;
         if sink(&Sample {
             axis: 0.0,
@@ -823,13 +924,30 @@ impl Simulator {
                 }
                 let trial = self.estimate_step(&hist, h, method);
                 match trial {
-                    Ok((next, err, order)) if err <= 1.0 => {
+                    Ok((_, _, _, Some(event))) => {
+                        h = event.clamp(h * 0.01, h * 0.999999);
+                        self.stats.switch_event_steps += 1;
+                        last_failure = "switch threshold localization".into();
+                    }
+                    Ok((next, err, order, None)) if err <= 1.0 => {
                         self.stats.accepted_steps += 1;
                         accepted += 1;
                         self.stats.minimum_step =
                             Some(self.stats.minimum_step.map_or(h, |v| v.min(h)));
+                        let transitions = hist
+                            .switches
+                            .iter()
+                            .zip(&next.switches)
+                            .filter(|(a, b)| a != b)
+                            .count();
                         hist = next;
                         restart = false;
+                        if transitions > 0 {
+                            self.stats.switch_transitions += transitions;
+                            hist.step = None;
+                            hist.previous_q = None;
+                            restart = true;
+                        }
                         if (hist.time - target).abs()
                             <= 16.0 * f64::EPSILON * target.abs().max(1e-30)
                         {
@@ -859,7 +977,7 @@ impl Simulator {
                         };
                         break;
                     }
-                    Ok((_, err, order)) => {
+                    Ok((_, err, order, None)) => {
                         last_failure = format!("local error estimate {err:.3e}");
                         h *= (0.8 * err.powf(-1.0 / (order as f64 + 1.0))).clamp(0.1, 0.5);
                     }
@@ -881,6 +999,7 @@ impl Simulator {
                 }
             }
         }
+        self.switches = hist.switches;
         self.state = Some(hist.x);
         Ok(())
     }
@@ -1083,7 +1202,7 @@ mod reliability_tests {
                     .flatten()
                     .any(|m| m.caps.iter().any(|c| *c > 0.0))
             );
-            let (_, error, _) = s.estimate_step(&accepted, 80e-9, method).unwrap();
+            let (_, error, _, _) = s.estimate_step(&accepted, 80e-9, method).unwrap();
             assert!(
                 error > 1.0,
                 "oversized trial must be rejected, error={error}, method={method:?}"
@@ -1114,6 +1233,88 @@ mod reliability_tests {
             assert_eq!(
                 retry, expected,
                 "retry after rejected trials must match a clean run"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod switch_history_tests {
+    use super::*;
+    fn switched() -> Simulator {
+        let mut b = CircuitBuilder::new();
+        let z = NodeId::GROUND;
+        let rail = b.node("rail");
+        let control = b.node("control");
+        let out = b.node("out");
+        b.add("vrail", &[rail, z], Element::Voltage(1.0.into()))
+            .unwrap();
+        b.add(
+            "vctrl",
+            &[control, z],
+            Element::Voltage(Source {
+                dc: 0.0,
+                ac: Default::default(),
+                waveform: Some(Waveform::Pwl(vec![(0.0, 0.0), (0.001, 1.0)])),
+            }),
+        )
+        .unwrap();
+        b.add(
+            "s1",
+            &[rail, out, control, z],
+            Element::VoltageSwitch {
+                model: SwitchModel {
+                    threshold: 0.5,
+                    hysteresis: 0.1,
+                    ..Default::default()
+                },
+                initial_on: false,
+            },
+        )
+        .unwrap();
+        b.add("r", &[out, z], Element::Resistor(100.0)).unwrap();
+        b.add(
+            "c",
+            &[out, z],
+            Element::Capacitor {
+                capacitance: 1e-6,
+                ic: None,
+            },
+        )
+        .unwrap();
+        let mut s = b.build().compile().unwrap().simulator();
+        s.options = SolverOptions::precise();
+        s
+    }
+    #[test]
+    fn rejected_switch_trials_preserve_hysteresis_and_retry() {
+        for method in [
+            IntegrationMethod::BackwardEuler,
+            IntegrationMethod::Trapezoidal,
+            IntegrationMethod::Bdf2,
+        ] {
+            let mut s = switched();
+            let accepted = s.initialize(false).unwrap();
+            let snapshot = accepted.clone();
+            let (_, _, _, event) = s.estimate_step(&accepted, 0.0009, method).unwrap();
+            assert!(event.is_some());
+            assert!(
+                (event.unwrap() - 0.0006).abs() < 1e-9,
+                "upper threshold must be located in time"
+            );
+            assert_eq!(accepted, snapshot);
+            let limit = s.options.max_iterations;
+            s.options.max_iterations = 1;
+            assert!(s.take_step(&accepted, 0.0009, method).is_err());
+            assert_eq!(accepted, snapshot);
+            s.options.max_iterations = limit;
+            let retry = s.take_step(&accepted, 0.0001, method).unwrap();
+            let mut fresh = switched();
+            let initial = fresh.initialize(false).unwrap();
+            assert_eq!(retry, fresh.take_step(&initial, 0.0001, method).unwrap());
+            assert_eq!(
+                s.switches, fresh.switches,
+                "trial state must not leak into simulator DC state"
             );
         }
     }

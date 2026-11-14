@@ -2,8 +2,8 @@
   "schema_version": 1,
   "scope_version": "core-v1.0",
   "scope_sha256": "ce04fe7d063dbf218ccb131e0670d96cd0a243073c6a590f61a993b69bacdb30",
-  "generated_at": "2026-11-13T22:24:49+00:00",
-  "source_sha256": "cac3e4eeb0f5fba4108b4142d3efcbc0bc4f06e8bb25fdfe3bd89c6a3f4148ad",
+  "generated_at": "2026-11-14T00:40:51+00:00",
+  "source_sha256": "fa51fd92f9d626d88a5e99e4fb73ecc41337bcf5f964b9c4973a861bd326c92b",
   "platform": "linux",
   "suites": {
     "core": {
@@ -16,10 +16,11 @@
         "simulator::precision_floor_tests::sub_ulp_charge_updates_do_not_collapse_the_timestep_or_hide_source_errors": "passed",
         "simulator::reliability_tests::gmin_recovers_after_direct_newton_failure": "passed",
         "simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories": "passed",
-        "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed"
+        "simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure": "passed",
+        "simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry": "passed"
       },
       "log": "reports/logs/core.log",
-      "log_sha256": "45c0fb1b246dc421164b3041a286e285928f2c028173aa7a0578d94a7f3fd85f"
+      "log_sha256": "70d8cb959b55053bfa03e5435adde212e2062589717dda338437e2b8adc767f3"
     },
     "analytical": {
       "status": "passed",
@@ -41,7 +42,7 @@
         "tolerances_and_limits_are_checked": "passed"
       },
       "log": "reports/logs/analytical.log",
-      "log_sha256": "fd9852a81dc141651ce3d118b7e45de9b9fa03278f2bef5f0471d9788e3d68b5"
+      "log_sha256": "a8ee2e9922914b3312bb44e770b6a184953412257000584ee9b8f50ca44395d8"
     },
     "expressions": {
       "status": "passed",
@@ -51,7 +52,7 @@
         "expression::tests::expressions": "passed"
       },
       "log": "reports/logs/expressions.log",
-      "log_sha256": "867a88d415d63ba2719c405eda065c0df1e6256b2e625b827c96fd7b0f8e911f"
+      "log_sha256": "33c3f34a026aed2e04ed919d07732cf69d0a4a294742e110634ec75128067d32"
     },
     "parser": {
       "status": "passed",
@@ -72,7 +73,22 @@
         "stiff_diode_transient_converges_under_refinement": "passed"
       },
       "log": "reports/logs/parser.log",
-      "log_sha256": "6787e4552f6b92196768b4e8d7227c68efea7332577d645a4d5ca367f02e14dc"
+      "log_sha256": "1bbeb57358b923a49faed8dee8ec4b6745f697192926bfe4b3202e13ca1e687e"
+    },
+    "expansion": {
+      "status": "passed",
+      "returncode": 0,
+      "tests": {
+        "buck_refinement_and_power_balance": "passed",
+        "coupled_transient_energy_balance": "passed",
+        "coupling_validation_and_hierarchy": "passed",
+        "switch_dc_hysteresis_ac_and_current_polarity": "passed",
+        "switch_event_timing_and_initial_hints": "passed",
+        "switch_models_and_controls_are_instance_scoped": "passed",
+        "transformer_ac_transfer_and_polarity": "passed"
+      },
+      "log": "reports/logs/expansion.log",
+      "log_sha256": "55cdc9f3134ad7acb3f013e6aa815ee4963409a234b282fd093ff7b8d9f8c3a0"
     },
     "cli": {
       "status": "passed",
@@ -82,7 +98,7 @@
         "stdout_csv_and_failure_exit": "passed"
       },
       "log": "reports/logs/cli.log",
-      "log_sha256": "14ab409f04eeafb889a52f410ae7da87c36fdeea48997c293243cffc6f5c3e96"
+      "log_sha256": "288fbe4be19efe8ae2620f7d812077446ae6889f5a2671ae8c1d20eca8a762d7"
     },
     "oracle": {
       "status": "passed",
@@ -92,6 +108,9 @@
         "classic_parameter_matrix_matches_ngspice": "passed",
         "classic_transient_temperature_matrix_matches_ngspice": "passed",
         "continuation_recovery_matches_original_ngspice_bias": "passed",
+        "expansion_buck_matches_reference": "passed",
+        "expansion_switches_match_reference": "passed",
+        "expansion_transformer_matches_reference": "passed",
         "instance_temperature_overrides_match_ngspice": "passed",
         "mos1_process_and_sheet_resistance_match_reference": "passed",
         "nonlinear_operating_points": "passed",
@@ -103,7 +122,7 @@
         "temperature_breakdown_and_base_resistance": "passed"
       },
       "log": "reports/logs/oracle.log",
-      "log_sha256": "6106a077d1141a8f24713626223bf8c99603f2b85e7a13bd49bf56b219353206",
+      "log_sha256": "2abb51f8265470faf661126fdd99206e62f13b4285ab58b7a4af1dfc09adbb25",
       "reference_version": "ngspice-47",
       "executable_sha256": "ab345dc5ed68e7e15649abcac8d536d62733c2f0281b331b0cf7864e4ebf8981"
     },
@@ -114,25 +133,21 @@
         "ladder_10000": "passed"
       },
       "log": "reports/logs/scale.log",
-      "log_sha256": "4248aa2421c03a347341f48eed60ba6224150ebb5c6fb22cd3e4ddcd4d8e5815"
+      "log_sha256": "be42631b66728e9d5706c45fde01710bd6380d8ec80f968f70e7551d9d382c0d"
     },
     "platform": {
-      "status": "passed",
-      "tests": {
-        "Linux": "passed",
-        "Darwin": "passed",
-        "Windows": "passed"
-      },
-      "evidence": "reports/platform-evidence.json"
+      "status": "not_run",
+      "tests": {},
+      "reason": "native evidence is stale for this numerical source"
     }
   },
   "metrics": {
     "total": {
       "total": 48,
       "implemented": 48,
-      "evidenced": 48,
+      "evidenced": 47,
       "implementation_percent": 100.0,
-      "evidenced_percent": 100.0
+      "evidenced_percent": 97.92
     },
     "categories": {
       "Analyses": {
@@ -173,9 +188,9 @@
       "Library and acceptance": {
         "total": 8,
         "implemented": 8,
-        "evidenced": 8,
+        "evidenced": 7,
         "implementation_percent": 100.0,
-        "evidenced_percent": 100.0
+        "evidenced_percent": 87.5
       }
     },
     "criteria": [
@@ -707,7 +722,7 @@
           "platform/Darwin",
           "platform/Windows"
         ],
-        "state": "evidenced"
+        "state": "implemented, evidence incomplete"
       },
       {
         "id": "L07",
@@ -740,9 +755,9 @@
     ],
     "oracle": {
       "status": "passed",
-      "passed": 13,
+      "passed": 16,
       "failed": 0,
-      "discovered": 13,
+      "discovered": 16,
       "pass_percent": 100.0
     }
   }

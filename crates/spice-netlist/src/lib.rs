@@ -280,10 +280,33 @@ fn collect_params(
 fn value(line: &Line, text: &str, env: &HashMap<String, f64>) -> PResult<f64> {
     expression::evaluate(text, env).map_err(|e| line.error(e))
 }
-fn model(line: &Line, env: &HashMap<String, f64>) -> PResult<(String, Model)> {
+#[derive(Clone)]
+enum ModelDefinition {
+    Semiconductor(Model),
+    Switch { model: SwitchModel, current: bool },
+}
+fn model(line: &Line, env: &HashMap<String, f64>) -> PResult<(String, ModelDefinition)> {
     let t = &line.tokens;
     if t.len() < 3 {
         return Err(line.error(".model requires name and type"));
+    }
+    if t[2] == "sw" || t[2] == "csw" {
+        let current = t[2] == "csw";
+        let mut m = SwitchModel::default();
+        for (key, expr) in assignments(line, &t[3..])? {
+            let v = value(line, &expr, env)?;
+            match key.as_str() {
+                "ron" => m.ron = v,
+                "roff" => m.roff = v,
+                "vt" if !current => m.threshold = v,
+                "vh" if !current => m.hysteresis = v,
+                "it" if current => m.threshold = v,
+                "ih" if current => m.hysteresis = v,
+                _ => return Err(line.error(format!("unsupported switch parameter {key}"))),
+            }
+        }
+        m.validate().map_err(|e| line.error(e))?;
+        return Ok((t[1].clone(), ModelDefinition::Switch { model: m, current }));
     }
     let kind = match t[2].as_str() {
         "d" => ModelKind::Diode,
@@ -305,7 +328,7 @@ fn model(line: &Line, env: &HashMap<String, f64>) -> PResult<(String, Model)> {
             model.set(&name, v).map_err(|e| line.error(e))?;
         }
     }
-    Ok((t[1].clone(), model))
+    Ok((t[1].clone(), ModelDefinition::Semiconductor(model)))
 }
 fn elaborate(lines: Vec<Line>) -> PResult<ParsedNetlist> {
     let fallback = Line {
@@ -551,7 +574,7 @@ impl Context<'_> {
         prefix: &str,
         pins: &HashMap<String, String>,
         env: &HashMap<String, f64>,
-        inherited: &HashMap<String, Model>,
+        inherited: &HashMap<String, ModelDefinition>,
         stack: &mut Vec<String>,
     ) -> PResult<()> {
         let mut models = inherited.clone();
@@ -665,6 +688,53 @@ impl Context<'_> {
             let full_name = format!("{prefix}{name}");
             let mut node_count = 2;
             let element = match name.as_bytes().first().copied() {
+                Some(b'k') => {
+                    if t.len() != 4 {
+                        return Err(
+                            line.error("K needs two inductor names and a coupling coefficient")
+                        );
+                    }
+                    node_count = 0;
+                    Element::Mutual {
+                        inductors: [format!("{prefix}{}", t[1]), format!("{prefix}{}", t[2])],
+                        coupling: value(line, &t[3], env)?,
+                    }
+                }
+                Some(b's') | Some(b'w') => {
+                    let current = name.starts_with('w');
+                    let index = if current { 4 } else { 5 };
+                    if t.len() != index + 1 && t.len() != index + 2 {
+                        return Err(line.error("invalid switch terminals/model/ON-OFF hint"));
+                    }
+                    let Some(ModelDefinition::Switch {
+                        model,
+                        current: model_current,
+                    }) = models.get(&t[index])
+                    else {
+                        return Err(line.error("switch needs an SW/CSW model"));
+                    };
+                    if current != *model_current {
+                        return Err(line.error("switch/model type mismatch"));
+                    }
+                    let initial_on = match t.get(index + 1).map(String::as_str) {
+                        None | Some("off") => false,
+                        Some("on") => true,
+                        _ => return Err(line.error("switch hint must be ON or OFF")),
+                    };
+                    if current {
+                        Element::CurrentSwitch {
+                            control: format!("{prefix}{}", t[3]),
+                            model: *model,
+                            initial_on,
+                        }
+                    } else {
+                        node_count = 4;
+                        Element::VoltageSwitch {
+                            model: *model,
+                            initial_on,
+                        }
+                    }
+                }
                 Some(b'r') | Some(b'c') | Some(b'l') => {
                     if t.len() < 4 {
                         return Err(line.error("passive device needs two nodes and a value"));
@@ -732,10 +802,13 @@ impl Context<'_> {
                     let model_name = t
                         .get(node_count + 1)
                         .ok_or_else(|| line.error("missing device model"))?;
-                    let model = models
+                    let definition = models
                         .get(model_name)
-                        .ok_or_else(|| line.error(format!("unknown model {model_name}")))?
-                        .clone();
+                        .ok_or_else(|| line.error(format!("unknown model {model_name}")))?;
+                    let ModelDefinition::Semiconductor(model) = definition else {
+                        return Err(line.error("semiconductor needs a semiconductor model"));
+                    };
+                    let model = model.clone();
                     let valid = if name.starts_with('d') {
                         model.kind == ModelKind::Diode
                     } else if name.starts_with('q') {

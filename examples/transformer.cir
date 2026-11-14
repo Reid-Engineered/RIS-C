@@ -1,0 +1,10 @@
+Loaded transformer, dotted terminals first
+V1 drive 0 DC 0 AC 1 SIN(0 1 1k)
+R1 drive primary 10
+L1 primary 0 10m
+L2 secondary 0 40m
+K1 L1 L2 0.98
+Rload secondary 0 1k
+.ac dec 10 100 100k
+.tran 10u 3m 0 2u
+.end

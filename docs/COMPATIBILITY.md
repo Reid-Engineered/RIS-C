@@ -20,6 +20,9 @@ Compatibility means documented equations and numerical agreement on the fixture 
 | R name n+ n− value | Positive linear resistance |
 | C name n+ n− value [IC=value] | Positive linear capacitance |
 | L name n+ n− value [IC=value] | Positive linear inductance |
+| K name L1 L2 coefficient | Symmetric mutual flux; coefficient in [-1,1], dotted first terminals |
+| S name n+ n− control+ control− model [ON/OFF] | Voltage-controlled SW model |
+| W name n+ n− controlling-branch model [ON/OFF] | Current-controlled CSW model |
 | V / I | DC, complex AC magnitude/phase, PULSE, SIN, PWL |
 | E / G | Four nodes and one linear gain |
 | F / H | Two nodes, controlling branch device, gain |
@@ -27,7 +30,13 @@ Compatibility means documented equations and numerical agreement on the fixture 
 | Q | C B E [substrate] model, area/M, TEMP/DTEMP, OFF, IC=VBE,VCE; omitted substrate is ground |
 | M | D G S B model, L/W/AD/AS/PD/PS/M/NRD/NRS, TEMP/DTEMP, OFF, IC=VDS,VGS,VBS |
 
-RLC temperature coefficients, nonlinear passive elements, mutual inductance, switches, transmission lines, and other families are unsupported. F/H controls must name a device with an allocated branch current (voltage source, inductor, E or H).
+RLC temperature coefficients, nonlinear passive elements, transmission lines, and other families are unsupported. F/H/W controls must name a device with an allocated branch current (voltage source, inductor, E or H); positive control current uses that branch's first-to-second-terminal orientation.
+
+K references resolve after all windings are declared and respect subcircuit instance scope. Self-coupling, duplicate pairs, non-inductor references, and non-positive-semidefinite multiwinding inductance matrices are errors. Omitted pairs have zero mutual inductance. Perfect coupling is supported when the surrounding circuit supplies a nonsingular MNA system; ideal voltage-source/inductor loops can still be singular. Magnetic cores remain linear.
+
+SW models accept RON, ROFF, VT and VH; CSW models accept RON, ROFF, IT and IH. Defaults are 1 ohm, 1e12 ohm, zero threshold and zero hysteresis. Resistances must be positive and finite with finite reciprocal conductance. Hysteresis is a nonnegative half-width: above threshold+half-width the switch turns on; below threshold-half-width it turns off; equality and the band retain accepted state. Initial state defaults to OFF; ON/OFF hints select the state inside the band. Negative hysteresis and additional switch-model parameters are explicit errors.
+
+DC sweeps retain state between successful points; separate sweeps start from the instance hints. AC freezes conductance at the nominal operating point. Transient trials freeze the previously accepted conductance over an interval, locate threshold crossings from endpoint control values, commit state only at an accepted endpoint, and restart integration. Rejected/failed trials cannot change accepted hysteresis. A maximum step appropriate to control oscillations remains necessary; endpoint localization cannot discover multiple crossings hidden inside one step. Numerical equality at a threshold can differ from ngspice's iteration-dependent boundary choice, so external waveform comparisons sample away from exact threshold instants; local tests directly check event timing and equality behavior.
 
 Sources require explicit finite pulse rise/fall times greater than zero and a period at least rise+width+fall. All seven PULSE arguments are required. SIN accepts offset, amplitude, frequency, optional delay/damping/phase. PWL times are nonnegative and strictly increasing; duplicate-time discontinuities are rejected. Without a DC field, waveform value at zero supplies the bias. Pulse/SIN/PWL knots are breakpoints; this does not replace an appropriate maximum step for oscillatory inputs.
 

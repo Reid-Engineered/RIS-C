@@ -15,11 +15,15 @@ SPEC = Path('reports/parity-scope.json')
 RESULT = Path('reports/parity.json')
 MARKDOWN = Path('docs/PARITY.md')
 HISTORY = Path('reports/parity-history.jsonl')
+REPORT_TITLE = 'Core parity report'
+REPORT_SCRIPT = 'parity.py'
+SCOPE_LABEL = 'agreed core'
 SUITES = {
     'core': ['-p', 'spice-core', '--lib'],
     'analytical': ['-p', 'spice-core', '--test', 'analytical'],
     'expressions': ['-p', 'spice-netlist', '--lib'],
     'parser': ['-p', 'spice-netlist', '--test', 'parser'],
+    'expansion': ['-p', 'spice-netlist', '--test', 'expansion'],
     'cli': ['-p', 'spice-cli', '--test', 'batch'],
     'oracle': ['-p', 'spice-netlist', '--test', 'ngspice'],
 }
@@ -136,7 +140,7 @@ def execute(root, name, command, expected=None):
             'log': logfile.as_posix(), 'log_sha256': hashlib.sha256(output.encode()).hexdigest()}
 
 
-def run_suites(root, ngspice):
+def run_suites(root, ngspice, oracle_filter=None):
     # Prefer the session-local toolchain only where installed; normal CI uses cargo.
     cargo = [str(root / 'scripts/cargo-local.sh')] if os.name != 'nt' else ['cargo']
     suites = {}
@@ -158,6 +162,8 @@ def run_suites(root, ngspice):
         command = cargo + ['test', *args, '--locked', '--color', 'never', '--', '--test-threads=1']
         if name == 'oracle':
             command.append('--ignored')
+            if oracle_filter:
+                command.append(oracle_filter)
         suites[name] = execute(root, name, command)
         if name == 'oracle':
             suites[name]['reference_version'] = match[0]
@@ -174,12 +180,12 @@ def render(report):
     total = metrics['total']
     oracle = metrics['oracle']
     rate = 'not measured' if oracle['pass_percent'] is None else f"{oracle['pass_percent']:.2f}% ({oracle['passed']}/{oracle['passed'] + oracle['failed']} executed test groups)"
-    lines = ['# Core parity report', '',
+    lines = [f'# {REPORT_TITLE}', '',
              f"Scope: **{report['scope_version']}**, reference **ngspice 47**. Generated {report['generated_at']}.", '',
              f"**Evidence-backed checklist coverage: {total['evidenced_percent']:.2f}% ({total['evidenced']}/{total['total']}).**", '',
              f"Implementation checklist coverage: **{total['implementation_percent']:.2f}% ({total['implemented']}/{total['total']})**.", '',
              f"ngspice comparison pass rate: **{rate}**; oracle status: `{oracle['status']}`.", '',
-             'These percentages describe the agreed core checklist, not all of ngspice, numerical accuracy, engineering effort, or production readiness. '
+             f'These percentages describe the {SCOPE_LABEL} checklist, not all of ngspice, numerical accuracy, engineering effort, or production readiness. '
              'Each criterion has one point. Missing, untested, skipped, failed, or unavailable criteria receive no evidence credit; partial implementations receive no implementation credit. '
              'A passing witness covers its named fixtures, not every circuit that might use a feature. Oracle counts are test groups, not individual circuits or sample points.', '',
              '| Category | Implemented | Evidence-backed | Evidence-backed coverage |',
@@ -192,16 +198,16 @@ def render(report):
         checks = ', '.join(f'`{check}`' for check in item['checks']) or 'No executable witness registered'
         lines.append(f"| {item['id']} | {item['title']} | {item['state']} | {evidence}; {checks} |")
     lines += ['', '## Refresh and history', '',
-              'Run `python3 scripts/parity.py --run` to execute the registered suites and the 10,000-node benchmark, then regenerate Markdown and JSON. '
+              f'Run `python3 scripts/{REPORT_SCRIPT} --run` to execute the registered suites and the 10,000-node benchmark, then regenerate Markdown and JSON. '
               'Set `NGSPICE_BIN` or use `--ngspice /absolute/path`; the local pinned reference is discovered automatically. '
               'Without ngspice, oracle coverage is unmeasured and its criteria lose evidence credit.', '',
-              'Run `python3 scripts/parity.py --check` to detect stale source inputs, changed scope, or edited report totals. '
+              f'Run `python3 scripts/{REPORT_SCRIPT} --check` to detect stale source inputs, changed scope, or edited report totals. '
               'The check validates the recorded snapshot; it does not rerun tests. '
               'CI refreshes the results and uploads reports plus logs even when tests fail.', '',
-              'The denominator is versioned in [parity-scope.json](../reports/parity-scope.json). '
+              f'The denominator is versioned in [{SPEC.name}](../{SPEC.as_posix()}). '
               'Changing criteria requires a scope-version bump and an entry in its change log; compare history only within the same scope version. '
-              '[History](../reports/parity-history.jsonl) records source/metric changes without duplicating identical reruns. '
-              '[Machine-readable snapshot](../reports/parity.json) contains per-suite outcomes and source hashes.', '',
+              f'[History](../{HISTORY.as_posix()}) records source/metric changes without duplicating identical reruns. '
+              f'[Machine-readable snapshot](../{RESULT.as_posix()}) contains per-suite outcomes and source hashes.', '',
               f"Source SHA-256: `{report['source_sha256']}`.", '']
     return '\n'.join(lines)
 
@@ -225,7 +231,7 @@ def check_report(root=ROOT):
     report = json.loads((root / RESULT).read_text())
     if (report['scope_version'] != spec['scope_version'] or report['scope_sha256'] != scope_signature(spec)
             or report['source_sha256'] != source_fingerprint(root)):
-        raise ValueError('parity report is stale; run python3 scripts/parity.py --run')
+        raise ValueError(f'parity report is stale; run python3 scripts/{REPORT_SCRIPT} --run')
     if report['metrics'] != calculate(spec, report['suites']):
         raise ValueError('recorded metrics do not match the scope and test outcomes')
     if (root / MARKDOWN).read_text() != render(report):
@@ -249,7 +255,7 @@ def main():
             local = ROOT / 'reference/build/src/ngspice'
             ngspice = str(Path(candidate).resolve()) if candidate else str(local) if local.is_file() else None
             tested_source=source_fingerprint()
-            suites = run_suites(ROOT, ngspice)
+            suites = run_suites(ROOT, ngspice, oracle_filter='expansion_' if REPORT_SCRIPT == 'expansion.py' else None)
             if source_fingerprint()!=tested_source:
                 raise ValueError('source changed during validation; rerun on a stable snapshot')
             report = {'schema_version': 1, 'scope_version': spec['scope_version'],
@@ -263,7 +269,7 @@ def main():
             report = check_report()
             failed = False
         totals = report['metrics']['total']
-        print(f"{totals['evidenced_percent']:.2f}% evidence-backed; {totals['implementation_percent']:.2f}% implemented ({report['scope_version']}). See docs/PARITY.md.")
+        print(f"{totals['evidenced_percent']:.2f}% evidence-backed; {totals['implementation_percent']:.2f}% implemented ({report['scope_version']}). See {MARKDOWN.as_posix()}.")
         return int(failed)
     except (ValueError, KeyError, OSError) as error:
         print(f'parity: {error}', file=sys.stderr)

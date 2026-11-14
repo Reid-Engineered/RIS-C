@@ -1,0 +1,13 @@
+Open-loop buck converter with finite switch resistance
+Vin supply 0 12
+Vgate gate 0 PULSE(0 1 2u 0.1u 0.1u 9.8u 20u)
+S1 supply switching gate 0 power
+.model power SW(RON=0.1 ROFF=100meg VT=0.5)
+Dfree 0 switching rectifier
+.model rectifier D(IS=1e-9 N=1 RS=0.05)
+L1 switching output 100u
+C1 output 0 10u
+Rload output 0 10
+.options method=gear reltol=1e-5
+.tran 0.2u 400u 0 0.2u
+.end
