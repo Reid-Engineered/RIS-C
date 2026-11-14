@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/spice-core", "crates/spice-netlist", "crates/spice-cli"]
+members = ["crates/risc-c-core", "crates/risc-c-netlist", "crates/risc-c-cli"]
 resolver = "2"
 
 [workspace.package]

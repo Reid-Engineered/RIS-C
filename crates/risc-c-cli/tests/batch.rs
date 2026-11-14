@@ -6,7 +6,7 @@ use std::{
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 fn dir() -> PathBuf {
     let d = std::env::temp_dir().join(format!(
-        "spice-cli-{}-{}",
+        "risc-c-cli-{}-{}",
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));

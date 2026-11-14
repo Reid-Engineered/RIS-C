@@ -1,6 +1,6 @@
 pub mod legacy;
-use spice_core::*;
-use spice_netlist::{Analysis, parse_str};
+use risc_c_core::*;
+use risc_c_netlist::{Analysis, parse_str};
 
 pub const STIFF_NETLIST: &str = include_str!("../../../../examples/stiff-diode.cir");
 

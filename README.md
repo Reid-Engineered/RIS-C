@@ -22,8 +22,8 @@ Coupled inductors (`K`) and hysteretic voltage/current-controlled switches (`S`/
 ```sh
 python3 scripts/expansion.py --run
 python3 scripts/expansion.py --check
-cargo run -p spice-cli -- run examples/transformer.cir --output transformer.csv
-cargo run -p spice-cli -- run examples/buck.cir --output buck.csv
+cargo run -p risc-c-cli -- run examples/transformer.cir --output transformer.csv
+cargo run -p risc-c-cli -- run examples/buck.cir --output buck.csv
 ```
 
 ## Run
@@ -32,10 +32,10 @@ Requires Rust 1.91+; tested here on Rust 1.100. No native numerical library or n
 
 ```sh
 cargo test --workspace --locked
-cargo run -p spice-cli -- run examples/rc.cir --output results.csv
-cargo run -p spice-cli -- run examples/amplifier.cir --analysis ac --output gain.csv
-cargo run -p spice-cli -- run examples/inverter.cir --analysis tran --output switching.csv
-cargo run -p spice-cli -- run examples/stiff-diode.cir --output stiff.csv
+cargo run -p risc-c-cli -- run examples/rc.cir --output results.csv
+cargo run -p risc-c-cli -- run examples/amplifier.cir --analysis ac --output gain.csv
+cargo run -p risc-c-cli -- run examples/inverter.cir --analysis tran --output switching.csv
+cargo run -p risc-c-cli -- run examples/stiff-diode.cir --output stiff.csv
 ```
 
 When using this session's local toolchain, substitute `scripts/cargo-local.sh` for `cargo`. Multiple declared analyses produce `results.op.csv`, `results.ac.csv`, and `results.tran.csv`. `--output -` supports a single analysis on stdout. AC columns contain real and imaginary values, frequencies are Hz, and time is seconds. Diagnostics and solver counts go to stderr. An analysis failure returns nonzero and does not publish new simulation results.
@@ -43,7 +43,7 @@ When using this session's local toolchain, substitute `scripts/cargo-local.sh` f
 ## Embed
 
 ```rust
-use spice_core::*;
+use risc_c_core::*;
 
 fn main() -> Result<()> {
     let mut b = CircuitBuilder::new();
@@ -81,7 +81,7 @@ The oracle is optional and is never linked into the Rust runtime:
 ```sh
 scripts/build-reference.sh
 NGSPICE_BIN="$PWD/reference/build/src/ngspice" \
-  cargo test -p spice-netlist --test ngspice --locked -- --ignored
+  cargo test -p risc-c-netlist --test ngspice --locked -- --ignored
 ```
 
 The reference build needs a C compiler, make, curl, tar, and Python 3.11+. The archive checksum is verified. Analytical, derivative, charge-conservation, parser, CLI, cancellation, and concurrency tests run without ngspice. Oracle tests explicitly fail if requested without `NGSPICE_BIN`.
@@ -89,7 +89,7 @@ The reference build needs a C compiler, make, curl, tar, and Python 3.11+. The a
 ```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo run -p spice-core --example ladder --release -- 10000
+cargo run -p risc-c-core --example ladder --release -- 10000
 ```
 
 Native numerical acceptance has been observed on Linux x86-64, macOS ARM64, and Windows AMD64 for the recorded numerical fingerprint; see [platform evidence](reports/platform-evidence.json). A separate Linux job runs the pinned ngspice oracle suite. New source changes invalidate stale platform evidence.

@@ -21,7 +21,7 @@
       "category": "Coupled inductors",
       "title": "K syntax, hierarchical references and physical coupling validation",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/expansion.rs",
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
       "checks": [
         "expansion/coupling_validation_and_hierarchy"
       ]
@@ -31,7 +31,7 @@
       "category": "Coupled inductors",
       "title": "Loaded transformer AC transfer, ideal coupling and dot polarity",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "expansion/transformer_ac_transfer_and_polarity",
         "oracle/expansion_transformer_matches_reference"
@@ -42,7 +42,7 @@
       "category": "Coupled inductors",
       "title": "Coupled flux histories and passive magnetic energy balance for BE/trap/BDF2",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/expansion.rs",
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
       "checks": [
         "expansion/coupled_transient_energy_balance"
       ]
@@ -52,7 +52,7 @@
       "category": "Controlled switches",
       "title": "SW/CSW DC hysteresis, controlling-current polarity and frozen-bias AC",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/expansion.rs",
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
       "checks": [
         "expansion/switch_dc_hysteresis_ac_and_current_polarity",
         "expansion/switch_models_and_controls_are_instance_scoped"
@@ -63,7 +63,7 @@
       "category": "Controlled switches",
       "title": "ON/OFF initialization, threshold localization and transient restart",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/expansion.rs",
+      "evidence": "crates/risc-c-netlist/tests/expansion.rs",
       "checks": [
         "expansion/switch_event_timing_and_initial_hints"
       ]
@@ -73,7 +73,7 @@
       "category": "Controlled switches",
       "title": "Rejected and failed trials preserve accepted hysteresis and retry results",
       "implemented": true,
-      "evidence": "crates/spice-core/src/simulator.rs",
+      "evidence": "crates/risc-c-core/src/simulator.rs",
       "checks": [
         "core/simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry"
       ]
@@ -83,7 +83,7 @@
       "category": "Controlled switches",
       "title": "Voltage/current-controlled switched-load DC/transient reference comparisons",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/expansion_switches_match_reference"
       ]
@@ -93,7 +93,7 @@
       "category": "Converter validation",
       "title": "Buck converter refinement, power balance and ngspice waveform agreement",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "expansion/buck_refinement_and_power_balance",
         "oracle/expansion_buck_matches_reference"

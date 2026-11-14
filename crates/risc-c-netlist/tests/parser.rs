@@ -1,5 +1,5 @@
 mod common;
-use spice_netlist::*;
+use risc_c_netlist::*;
 #[test]
 fn hierarchy_and_scoping() {
     let p=parse_str("Hierarchy\n.param r=1k\nV1 in 0 10\nX1 in out divider params: r={r*2}\nRload out 0 2k\n.subckt divider a b params: r=1k\nR1 a b {r}\n.ends divider\n.op\n.end").unwrap();

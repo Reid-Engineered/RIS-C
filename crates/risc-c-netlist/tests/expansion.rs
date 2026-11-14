@@ -1,5 +1,5 @@
-use spice_core::*;
-use spice_netlist::*;
+use risc_c_core::*;
+use risc_c_netlist::*;
 
 fn circuit(text: &str) -> CompiledCircuit {
     parse_str(text).unwrap().circuit.compile().unwrap()

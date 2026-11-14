@@ -20,7 +20,7 @@
       "category": "Analyses",
       "title": "DC operating point",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/divider_and_source_current",
         "oracle/nonlinear_operating_points"
@@ -31,7 +31,7 @@
       "category": "Analyses",
       "title": "Independent-source DC sweep",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/divider_and_source_current"
       ]
@@ -41,7 +41,7 @@
       "category": "Analyses",
       "title": "Linear RC small-signal AC",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/rc_ac_and_transient"
       ]
@@ -51,7 +51,7 @@
       "category": "Analyses",
       "title": "Semiconductor bias-linearized AC",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/semiconductor_ac_capacitances"
       ]
@@ -61,7 +61,7 @@
       "category": "Analyses",
       "title": "Linear and decade frequency grids",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/ac_rc_cutoff",
         "oracle/rc_ac_and_transient"
@@ -72,7 +72,7 @@
       "category": "Analyses",
       "title": "Octave frequency grids",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/octave_grid_matches_rc_transfer_function"
       ]
@@ -82,7 +82,7 @@
       "category": "Analyses",
       "title": "Nominal bias restored after DC sweep",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/ac_restores_nominal_nonlinear_bias_after_sweep"
       ]
@@ -92,7 +92,7 @@
       "category": "Analyses",
       "title": "UIC transient initialization",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "parser/initial_conditions",
         "analytical/floating_capacitor_ic_respects_existing_hint"
@@ -103,7 +103,7 @@
       "category": "Numerical core",
       "title": "MNA branch constraints and current sign conventions",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/divider_and_source_current"
       ]
@@ -113,7 +113,7 @@
       "category": "Numerical core",
       "title": "Sparse real and complex LU against dense Peroxide",
       "implemented": true,
-      "evidence": "crates/spice-core/src/linear.rs",
+      "evidence": "crates/risc-c-core/src/linear.rs",
       "checks": [
         "core/linear::tests::peroxide_dense_oracle_and_complex"
       ]
@@ -123,7 +123,7 @@
       "category": "Numerical core",
       "title": "Row/column equilibration on badly scaled fixture",
       "implemented": true,
-      "evidence": "crates/spice-core/src/linear.rs",
+      "evidence": "crates/risc-c-core/src/linear.rs",
       "checks": [
         "core/linear::tests::peroxide_dense_oracle_and_complex"
       ]
@@ -133,7 +133,7 @@
       "category": "Numerical core",
       "title": "Newton device derivatives and bias convergence",
       "implemented": true,
-      "evidence": "crates/spice-core/src/device.rs",
+      "evidence": "crates/risc-c-core/src/device.rs",
       "checks": [
         "core/device::tests::peroxide_jacobians_and_charge_conservation",
         "oracle/nonlinear_operating_points"
@@ -144,7 +144,7 @@
       "category": "Numerical core",
       "title": "Gmin continuation through a direct-solve failure",
       "implemented": true,
-      "evidence": "crates/spice-core/src/simulator.rs",
+      "evidence": "crates/risc-c-core/src/simulator.rs",
       "checks": [
         "core/simulator::reliability_tests::gmin_recovers_after_direct_newton_failure",
         "oracle/continuation_recovery_matches_original_ngspice_bias"
@@ -155,7 +155,7 @@
       "category": "Numerical core",
       "title": "Source stepping through a direct-solve failure",
       "implemented": true,
-      "evidence": "crates/spice-core/src/simulator.rs",
+      "evidence": "crates/risc-c-core/src/simulator.rs",
       "checks": [
         "core/simulator::reliability_tests::source_stepping_recovers_after_direct_and_gmin_failure",
         "oracle/continuation_recovery_matches_original_ngspice_bias"
@@ -166,7 +166,7 @@
       "category": "Numerical core",
       "title": "Singular circuits return errors",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/singular_is_error"
       ]
@@ -176,7 +176,7 @@
       "category": "Numerical core",
       "title": "Independent concurrent simulators",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/concurrent_instances_and_cancellation"
       ]
@@ -186,7 +186,7 @@
       "category": "Transient integration",
       "title": "Backward Euler RC response",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/rc_transient_all_methods"
       ]
@@ -196,7 +196,7 @@
       "category": "Transient integration",
       "title": "Trapezoidal RC response",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/rc_transient_all_methods"
       ]
@@ -206,7 +206,7 @@
       "category": "Transient integration",
       "title": "BDF2 RC response",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/rc_transient_all_methods"
       ]
@@ -216,7 +216,7 @@
       "category": "Transient integration",
       "title": "Adaptive RL/RLC response",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/rl_and_rlc_transient"
       ]
@@ -226,7 +226,7 @@
       "category": "Transient integration",
       "title": "Rejected steps on a switching circuit",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/switching_rejections_and_restart"
       ]
@@ -236,7 +236,7 @@
       "category": "Transient integration",
       "title": "Source breakpoints and integrator restarts",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/switching_rejections_and_restart"
       ]
@@ -246,7 +246,7 @@
       "category": "Transient integration",
       "title": "Isolated accepted and trial histories",
       "implemented": true,
-      "evidence": "crates/spice-core/src/simulator.rs",
+      "evidence": "crates/risc-c-core/src/simulator.rs",
       "checks": [
         "core/simulator::reliability_tests::rejected_trials_preserve_accepted_meyer_and_bdf_histories",
         "oracle/switching_rejections_and_restart"
@@ -257,7 +257,7 @@
       "category": "Transient integration",
       "title": "Conflicting ICs and resource limits return errors",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/conflicting_initial_conditions",
         "analytical/tolerances_and_limits_are_checked"
@@ -268,7 +268,7 @@
       "category": "Devices",
       "title": "Linear resistor/capacitor/inductor behavior",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/divider_and_source_current",
         "analytical/rl_and_rlc_transient"
@@ -279,7 +279,7 @@
       "category": "Devices",
       "title": "Independent DC/AC and pulse source fixtures",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/rc_ac_and_transient",
         "oracle/switching_rejections_and_restart"
@@ -290,7 +290,7 @@
       "category": "Devices",
       "title": "Linear E/G/F/H controlled sources",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/dependent_sources",
         "analytical/current_controlled_and_transconductance_sources"
@@ -336,7 +336,7 @@
       "category": "Devices",
       "title": "Supported diode/BJT/MOS DC and capacitance subset",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/nonlinear_operating_points",
         "oracle/semiconductor_ac_capacitances"
@@ -347,7 +347,7 @@
       "category": "Devices",
       "title": "Supported-device temperature and breakdown fixtures",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "oracle/temperature_breakdown_and_base_resistance"
       ]
@@ -357,7 +357,7 @@
       "category": "Netlist compatibility",
       "title": "Numeric suffixes and bounded parameter expressions",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/expression.rs",
+      "evidence": "crates/risc-c-netlist/src/expression.rs",
       "checks": [
         "expressions/expression::tests::expressions",
         "parser/deep_expressions_are_bounded"
@@ -368,7 +368,7 @@
       "category": "Netlist compatibility",
       "title": "Parameter scoping and dependency cycles",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/hierarchy_and_scoping",
         "expressions/expression::tests::cycles"
@@ -379,7 +379,7 @@
       "category": "Netlist compatibility",
       "title": "Model cards and line continuations",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/model_cards_and_continuations"
       ]
@@ -389,7 +389,7 @@
       "category": "Netlist compatibility",
       "title": "Subcircuit expansion and recursion rejection",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/hierarchy_and_scoping",
         "parser/rejects_unsupported_fields"
@@ -400,7 +400,7 @@
       "category": "Netlist compatibility",
       "title": "Relative includes, case preservation and cycle rejection",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/include_cycle_and_case_sensitive_path"
       ]
@@ -410,7 +410,7 @@
       "category": "Netlist compatibility",
       "title": "Analysis directives and initial-condition syntax",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/example_netlists_compile",
         "parser/initial_conditions"
@@ -421,7 +421,7 @@
       "category": "Netlist compatibility",
       "title": "Unsupported features fail explicitly",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/rejects_unsupported_fields"
       ]
@@ -431,7 +431,7 @@
       "category": "Netlist compatibility",
       "title": "Malformed-input and nesting limits",
       "implemented": true,
-      "evidence": "crates/spice-netlist/src/lib.rs",
+      "evidence": "crates/risc-c-netlist/src/lib.rs",
       "checks": [
         "parser/malformed_inputs_return_errors",
         "parser/deep_expressions_are_bounded"
@@ -442,7 +442,7 @@
       "category": "Library and acceptance",
       "title": "Typed embeddable circuit API",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/divider_and_source_current"
       ]
@@ -452,7 +452,7 @@
       "category": "Library and acceptance",
       "title": "Batch CLI CSV and nonzero error exits",
       "implemented": true,
-      "evidence": "crates/spice-cli/tests/batch.rs",
+      "evidence": "crates/risc-c-cli/tests/batch.rs",
       "checks": [
         "cli/stdout_csv_and_failure_exit"
       ]
@@ -462,7 +462,7 @@
       "category": "Library and acceptance",
       "title": "Failed analyses do not publish successful result files",
       "implemented": true,
-      "evidence": "crates/spice-cli/tests/batch.rs",
+      "evidence": "crates/risc-c-cli/tests/batch.rs",
       "checks": [
         "cli/simulation_failure_does_not_publish_results"
       ]
@@ -472,7 +472,7 @@
       "category": "Library and acceptance",
       "title": "Streaming cancellation and reuse",
       "implemented": true,
-      "evidence": "crates/spice-core/tests/analytical.rs",
+      "evidence": "crates/risc-c-core/tests/analytical.rs",
       "checks": [
         "analytical/concurrent_instances_and_cancellation"
       ]
@@ -482,7 +482,7 @@
       "category": "Library and acceptance",
       "title": "10,000-node sparse benchmark executes",
       "implemented": true,
-      "evidence": "crates/spice-core/examples/ladder.rs",
+      "evidence": "crates/risc-c-core/examples/ladder.rs",
       "checks": [
         "scale/ladder_10000"
       ]
@@ -504,7 +504,7 @@
       "category": "Library and acceptance",
       "title": "Bistability, difficult-pivot and stiff nonlinear stress corpus",
       "implemented": true,
-      "evidence": "crates/spice-netlist/tests/ngspice.rs",
+      "evidence": "crates/risc-c-netlist/tests/ngspice.rs",
       "checks": [
         "parser/bistable_latch_and_scaled_pivots",
         "oracle/numerical_stress_corpus_matches_ngspice",

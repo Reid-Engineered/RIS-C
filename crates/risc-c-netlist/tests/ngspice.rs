@@ -1,7 +1,7 @@
 //! Explicitly opt-in oracle suite: NGSPICE_BIN=/path/to/ngspice cargo test --test ngspice -- --ignored
 mod common;
-use spice_core::*;
-use spice_netlist::*;
+use risc_c_core::*;
+use risc_c_netlist::*;
 use std::{
     path::PathBuf,
     process::Command,

@@ -1,5 +1,5 @@
 //! Reproducible sparse-core benchmark; no native numerical libraries.
-use spice_core::*;
+use risc_c_core::*;
 use std::time::Instant;
 fn main() -> Result<()> {
     let count = std::env::args()

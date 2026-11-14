@@ -7,7 +7,7 @@ Local environment: Linux x86_64, Rust 1.100.0, release profile for the benchmark
 - `cargo fmt --all -- --check`
 - `cargo clippy --workspace --all-targets --locked -- -D warnings`
 - `cargo test --workspace --locked`: 46 tests passed; sixteen external-oracle tests intentionally ignored in the ordinary suite.
-- `NGSPICE_BIN=... cargo test -p spice-netlist --test ngspice --locked -- --ignored`: sixteen oracle groups cover the original core and coupling/switch expansion against locally built, unmodified ngspice 47.
+- `NGSPICE_BIN=... cargo test -p risc-c-netlist --test ngspice --locked -- --ignored`: sixteen oracle groups cover the original core and coupling/switch expansion against locally built, unmodified ngspice 47.
 
 The test suites include independent Peroxide dense solves, finite-difference checks of Peroxide-generated device derivatives, terminal charge/current conservation, RLC analytical responses, all controlled-source types, parameter scoping/cycles/includes, 2,000 deterministic malformed netlists, initial conditions, limits, singular circuits, callback cancellation, concurrent simulators, and CLI exit/output behavior.
 
@@ -34,7 +34,7 @@ Run `python3 scripts/expansion.py --run` and `--check` to maintain the separate 
 
 ## Initial sparse benchmark
 
-Command: `cargo run -p spice-core --example ladder --release -- 10000`.
+Command: `cargo run -p risc-c-core --example ladder --release -- 10000`.
 
 One run of a linear RC ladder, 10,000 voltage nodes plus one source branch current:
 

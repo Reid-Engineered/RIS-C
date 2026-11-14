@@ -1,11 +1,13 @@
 [package]
-name = "spice-netlist"
+name = "risc-c-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-spice-core = { path = "../spice-core" }
+faer.workspace = true
+peroxide.workspace = true
+num-complex.workspace = true
 thiserror.workspace = true
 

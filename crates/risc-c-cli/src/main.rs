@@ -1,5 +1,5 @@
-use spice_core::*;
-use spice_netlist::{Analysis, parse_file};
+use risc_c_core::*;
+use risc_c_netlist::{Analysis, parse_file};
 use std::{
     error::Error,
     fmt::Write as _,

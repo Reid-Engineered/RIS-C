@@ -1,6 +1,6 @@
 //! A deliberately bounded SPICE dialect. The first physical line is the title.
 mod expression;
-use spice_core::*;
+use risc_c_core::*;
 use std::{
     collections::{BTreeMap, HashMap},
     fmt,

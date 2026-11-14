@@ -14,7 +14,7 @@ Noise-only KF/AF are not electrical-target omissions: noise analysis was exclude
 
 ## Executable matrix
 
-`crates/spice-netlist/tests/common/legacy.rs` defines the complete parameter inventory and generates a baseline plus a one-at-a-time perturbation for each canonical parameter. The same inventory is used in the ordinary parser/compilation tests and in the external-oracle tests.
+`crates/risc-c-netlist/tests/common/legacy.rs` defines the complete parameter inventory and generates a baseline plus a one-at-a-time perturbation for each canonical parameter. The same inventory is used in the ordinary parser/compilation tests and in the external-oracle tests.
 
 - 152 cards: 14 diode, 40 NPN, 40 PNP, 29 NMOS, and 29 PMOS.
 - Every card is compared with ngspice in DC and complex AC: 304 reference analyses. Defaults are combined with nonzero capacitance, resistance, transit-time, and phase values so interactions are exercised too.

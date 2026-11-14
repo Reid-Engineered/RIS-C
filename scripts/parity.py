@@ -20,13 +20,13 @@ REPORT_SCRIPT = 'parity.py'
 SCOPE_LABEL = 'agreed core'
 LOG_DIRECTORY = Path('reports/logs')
 SUITES = {
-    'core': ['-p', 'spice-core', '--lib'],
-    'analytical': ['-p', 'spice-core', '--test', 'analytical'],
-    'expressions': ['-p', 'spice-netlist', '--lib'],
-    'parser': ['-p', 'spice-netlist', '--test', 'parser'],
-    'expansion': ['-p', 'spice-netlist', '--test', 'expansion'],
-    'cli': ['-p', 'spice-cli', '--test', 'batch'],
-    'oracle': ['-p', 'spice-netlist', '--test', 'ngspice'],
+    'core': ['-p', 'risc-c-core', '--lib'],
+    'analytical': ['-p', 'risc-c-core', '--test', 'analytical'],
+    'expressions': ['-p', 'risc-c-netlist', '--lib'],
+    'parser': ['-p', 'risc-c-netlist', '--test', 'parser'],
+    'expansion': ['-p', 'risc-c-netlist', '--test', 'expansion'],
+    'cli': ['-p', 'risc-c-cli', '--test', 'batch'],
+    'oracle': ['-p', 'risc-c-netlist', '--test', 'ngspice'],
 }
 
 
@@ -169,7 +169,7 @@ def run_suites(root, ngspice, oracle_filter=None):
         if name == 'oracle':
             suites[name]['reference_version'] = match[0]
             suites[name]['executable_sha256'] = hashlib.sha256(Path(ngspice).read_bytes()).hexdigest()
-    suites['scale'] = execute(root, 'scale', cargo + ['run', '-p', 'spice-core', '--example',
+    suites['scale'] = execute(root, 'scale', cargo + ['run', '-p', 'risc-c-core', '--example',
                                 'ladder', '--release', '--locked', '--', '10000'], 'ladder_10000')
     from platform_check import load_evidence
     suites['platform'] = load_evidence(root)

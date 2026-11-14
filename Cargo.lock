@@ -620,6 +620,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03251193000f4bd3b042892be858ee50e8b3719f2b08e5833ac4353724632430"
 
 [[package]]
+name = "risc-c-cli"
+version = "0.1.0"
+dependencies = [
+ "risc-c-core",
+ "risc-c-netlist",
+]
+
+[[package]]
+name = "risc-c-core"
+version = "0.1.0"
+dependencies = [
+ "faer",
+ "num-complex",
+ "peroxide",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "risc-c-netlist"
+version = "0.1.0"
+dependencies = [
+ "risc-c-core",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -633,32 +659,6 @@ name = "seq-macro"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
-
-[[package]]
-name = "spice-cli"
-version = "0.1.0"
-dependencies = [
- "spice-core",
- "spice-netlist",
-]
-
-[[package]]
-name = "spice-core"
-version = "0.1.0"
-dependencies = [
- "faer",
- "num-complex",
- "peroxide",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "spice-netlist"
-version = "0.1.0"
-dependencies = [
- "spice-core",
- "thiserror 2.0.21",
-]
 
 [[package]]
 name = "syn"

@@ -1,5 +1,5 @@
 [package]
-name = "spice-cli"
+name = "risc-c-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,6 +10,6 @@ name = "spice"
 path = "src/main.rs"
 
 [dependencies]
-spice-core = { path = "../spice-core" }
-spice-netlist = { path = "../spice-netlist" }
+risc-c-core = { path = "../risc-c-core" }
+risc-c-netlist = { path = "../risc-c-netlist" }
 

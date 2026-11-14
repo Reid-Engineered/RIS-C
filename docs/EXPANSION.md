@@ -20,14 +20,14 @@ These percentages describe the coupling and switch expansion checklist, not all 
 
 | ID | Criterion | State | Evidence / witness tests |
 | --- | --- | --- | --- |
-| X01 | K syntax, hierarchical references and physical coupling validation | evidenced | [crates/spice-netlist/tests/expansion.rs](../crates/spice-netlist/tests/expansion.rs); `expansion/coupling_validation_and_hierarchy` |
-| X02 | Loaded transformer AC transfer, ideal coupling and dot polarity | evidenced | [crates/spice-netlist/tests/ngspice.rs](../crates/spice-netlist/tests/ngspice.rs); `expansion/transformer_ac_transfer_and_polarity`, `oracle/expansion_transformer_matches_reference` |
-| X03 | Coupled flux histories and passive magnetic energy balance for BE/trap/BDF2 | evidenced | [crates/spice-netlist/tests/expansion.rs](../crates/spice-netlist/tests/expansion.rs); `expansion/coupled_transient_energy_balance` |
-| X04 | SW/CSW DC hysteresis, controlling-current polarity and frozen-bias AC | evidenced | [crates/spice-netlist/tests/expansion.rs](../crates/spice-netlist/tests/expansion.rs); `expansion/switch_dc_hysteresis_ac_and_current_polarity`, `expansion/switch_models_and_controls_are_instance_scoped` |
-| X05 | ON/OFF initialization, threshold localization and transient restart | evidenced | [crates/spice-netlist/tests/expansion.rs](../crates/spice-netlist/tests/expansion.rs); `expansion/switch_event_timing_and_initial_hints` |
-| X06 | Rejected and failed trials preserve accepted hysteresis and retry results | evidenced | [crates/spice-core/src/simulator.rs](../crates/spice-core/src/simulator.rs); `core/simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry` |
-| X07 | Voltage/current-controlled switched-load DC/transient reference comparisons | evidenced | [crates/spice-netlist/tests/ngspice.rs](../crates/spice-netlist/tests/ngspice.rs); `oracle/expansion_switches_match_reference` |
-| X08 | Buck converter refinement, power balance and ngspice waveform agreement | evidenced | [crates/spice-netlist/tests/ngspice.rs](../crates/spice-netlist/tests/ngspice.rs); `expansion/buck_refinement_and_power_balance`, `oracle/expansion_buck_matches_reference` |
+| X01 | K syntax, hierarchical references and physical coupling validation | evidenced | [crates/risc-c-netlist/tests/expansion.rs](../crates/risc-c-netlist/tests/expansion.rs); `expansion/coupling_validation_and_hierarchy` |
+| X02 | Loaded transformer AC transfer, ideal coupling and dot polarity | evidenced | [crates/risc-c-netlist/tests/ngspice.rs](../crates/risc-c-netlist/tests/ngspice.rs); `expansion/transformer_ac_transfer_and_polarity`, `oracle/expansion_transformer_matches_reference` |
+| X03 | Coupled flux histories and passive magnetic energy balance for BE/trap/BDF2 | evidenced | [crates/risc-c-netlist/tests/expansion.rs](../crates/risc-c-netlist/tests/expansion.rs); `expansion/coupled_transient_energy_balance` |
+| X04 | SW/CSW DC hysteresis, controlling-current polarity and frozen-bias AC | evidenced | [crates/risc-c-netlist/tests/expansion.rs](../crates/risc-c-netlist/tests/expansion.rs); `expansion/switch_dc_hysteresis_ac_and_current_polarity`, `expansion/switch_models_and_controls_are_instance_scoped` |
+| X05 | ON/OFF initialization, threshold localization and transient restart | evidenced | [crates/risc-c-netlist/tests/expansion.rs](../crates/risc-c-netlist/tests/expansion.rs); `expansion/switch_event_timing_and_initial_hints` |
+| X06 | Rejected and failed trials preserve accepted hysteresis and retry results | evidenced | [crates/risc-c-core/src/simulator.rs](../crates/risc-c-core/src/simulator.rs); `core/simulator::switch_history_tests::rejected_switch_trials_preserve_hysteresis_and_retry` |
+| X07 | Voltage/current-controlled switched-load DC/transient reference comparisons | evidenced | [crates/risc-c-netlist/tests/ngspice.rs](../crates/risc-c-netlist/tests/ngspice.rs); `oracle/expansion_switches_match_reference` |
+| X08 | Buck converter refinement, power balance and ngspice waveform agreement | evidenced | [crates/risc-c-netlist/tests/ngspice.rs](../crates/risc-c-netlist/tests/ngspice.rs); `expansion/buck_refinement_and_power_balance`, `oracle/expansion_buck_matches_reference` |
 
 ## Refresh and history
 

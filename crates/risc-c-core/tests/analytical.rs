@@ -1,4 +1,4 @@
-use spice_core::*;
+use risc_c_core::*;
 fn near(a: f64, b: f64, eps: f64) {
     assert!((a - b).abs() < eps, "{a:e} vs {b:e}, tolerance {eps:e}");
 }
